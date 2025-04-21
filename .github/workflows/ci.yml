@@ -1,0 +1,25 @@
+name: CI Pipeline
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up C++ environment
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Build with Makefile
+        run: make
+
+      - name: Compile with C++98 standard
+        run: make CXXFLAGS="-Wall -Wextra -Werror -std=c++98"
+
+#      - name: Run unit tests
+#        run: make test

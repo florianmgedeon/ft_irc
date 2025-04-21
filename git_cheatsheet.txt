@@ -28,3 +28,23 @@ git pull origin dev
 
 #### 🧹 **Delete Branch**
 git push origin --delete feature/my-feature
+
+
+
+
+### ✅ Do This BEFORE You Push Changes To Your Feature Branch:
+
+#### 1. You’re in your feature branch:
+git checkout feature/my-feature
+
+#### 2. You want to get the latest `dev` updates:
+git fetch origin
+git rebase origin/dev
+
+👉 This makes sure your work is on **top of the latest `dev` branch** — which helps avoid conflicts later.
+
+#### ✅ Then if you've **never pushed this feature branch before**:
+git push -u origin feature/my-feature
+
+#### ✅ Or if you've **already pushed before**, and now you rebased:
+git push --force

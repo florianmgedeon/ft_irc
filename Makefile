@@ -1,0 +1,2 @@
+status:
+	@echo "Hello world!"

@@ -1,0 +1,30 @@
+🚀 Git Branch Workflow Cheat Sheet
+
+
+📌 **Create a New Branch**
+git checkout -b feature/my-feature
+
+
+#### 🔄 **Switch Branches**
+git checkout dev                 # switch to dev
+git checkout feature/my-feature # switch to feature branch
+
+
+#### 🔃 **Merge Feature into Dev**
+_(from `dev` branch, pull changes from feature branch)_
+
+git checkout dev
+git pull origin dev         # get latest dev
+git merge feature/my-feature
+git push origin dev
+
+
+#### 🔁 **Update Feature with Latest Dev**
+_(from `feature/my-feature` branch)_
+
+git checkout feature/my-feature
+git pull origin dev         
+
+
+#### 🧹 **Delete Branch**
+git push origin --delete feature/my-feature

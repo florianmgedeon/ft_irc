@@ -26,8 +26,8 @@ jobs:
 
       - name: Run cppcheck (C++ linter)
         run: |
-          cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 src include
+          cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 srcs inc
 
       - name: Check code formatting (clang-format dry-run)
         run: |
-          clang-format --dry-run --Werror $(find src include -name '*.cpp' -o -name '*.hpp' -o -name '*.h')
+          clang-format --dry-run --Werror $(find srcs inc -name '*.cpp' -o -name '*.hpp' -o -name '*.h')

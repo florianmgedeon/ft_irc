@@ -26,7 +26,9 @@ jobs:
 
       - name: Run cppcheck (C++ linter)
         run: |
-          cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 srcs inc
+          INCLUDE_PATHS=$(g++ -E -x c++ - -v < /dev/null 2>&1 | grep '^ /' | sed 's/^/-I/')
+          cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 $INCLUDE_PATHS srcs inc
+
 
       - name: Check code formatting (clang-format dry-run)
         run: |

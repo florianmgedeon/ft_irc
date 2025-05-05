@@ -21,13 +21,13 @@ jobs:
       - name: Compile with C++98 standard
         run: make CXXFLAGS="-Wall -Wextra -Werror -std=c++98"
 
-#      - name: Run unit tests
-#        run: make test
+      - name: Run unit tests
+        run: make test
 
-      # - name: Run cppcheck (C++ linter)
-      #   run: |
-      #     cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 srcs inc
+      - name: Run cppcheck (C++ linter)
+        run: |
+          cppcheck --enable=all --inconclusive --std=c++98 --quiet --error-exitcode=1 srcs inc
 
-      # - name: Check code formatting (clang-format dry-run)
-      #   run: |
-      #     clang-format --dry-run --Werror $(find srcs inc -name '*.cpp' -o -name '*.hpp' -o -name '*.h')
+      - name: Check code formatting (clang-format dry-run)
+        run: |
+          clang-format --dry-run --Werror $(find srcs inc -type f \( -name '*.cpp' -o -name '*.hpp' \))

@@ -1,8 +1,8 @@
 CXX = c++
 CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc
 NAME = ircserv
-INC = inc/ircserv.hpp
-SRC = srcs/main.cpp
+INC = inc/Server.hpp
+SRC = srcs/main.cpp srcs/Server.cpp
 OBJ = $(SRC:srcs/%.cpp=obj/%.o)
 
 all: $(NAME)

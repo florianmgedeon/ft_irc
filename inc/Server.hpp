@@ -15,6 +15,7 @@ class Server
         ~Server();
         int         getPort() const;
         std::string getPassword() const;
+        void        start();
 
 };
 

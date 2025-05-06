@@ -17,3 +17,8 @@ std::string Server::getPassword() const
 {
     return _password;
 }
+
+void Server::start()
+{
+    
+}

@@ -4,6 +4,12 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <cstring>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 class Server
 {
@@ -16,6 +22,7 @@ class Server
         int         getPort() const;
         std::string getPassword() const;
         void        start();
+        void        ft_socket();
 
 };
 

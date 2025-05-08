@@ -32,10 +32,22 @@ void Server::ft_socket()//take port as arg and not as class member?
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY); //IP address
 
     int opt = 1;
-    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
+        throw std::runtime_error("setsockopt() failed");
 
-    //fcntl
+    if (fcntl(sockfd, F_SETFL, O_NONBLOCK) == -1)
+        throw std::runtime_error("fcntl() failed");
 
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1)
+        throw std::runtime_error("bind() failed");
+
+    if (listen(sockfd, SOMAXCONN) == -1)
+        throw std::runtime_error("listen() failed");
+
+    _nfds = 1;
+    memset(_pollfds, 0, sizeof(_pollfds));
+    _pollfds[0].fd = sockfd;
+    _pollfds[0].events = POLLIN | POLLOUT | POLLOUT;
 }
 
 void Server::start()

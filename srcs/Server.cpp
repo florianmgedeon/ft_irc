@@ -68,8 +68,32 @@ void Server::accept_client()
     if (_nfds >= SOMAXCONN)
         throw std::runtime_error("Too many clients");
     _pollfds[_nfds].fd = client_fd;
-    _pollfds[_nfds].events = POLLIN;//more flags needed?
+    _pollfds[_nfds].events = POLLIN | POLLHUP;
     _nfds++;
+}
+
+void Server::recv_client(int index)
+{
+    char    buffer[512];
+    int     bytes_received;
+    int     client_fd = _pollfds[index].fd;
+
+    memset(buffer, 0, sizeof(buffer));
+    bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+    if (bytes_received <= 0)
+    {
+        if (bytes_received == 0)
+            std::cout << "Client disconnected" << std::endl;
+        else
+            throw std::runtime_error("recv() failed");
+    }
+    else
+        ft_parsing(client_fd, buffer);
+}
+
+void Server::quit_client(int index)
+{
+    
 }
 
 void Server::start()
@@ -81,15 +105,22 @@ void Server::start()
             throw std::runtime_error("poll() failed");
         for (int i = 0; i < _nfds; ++i)
         {
-            if (_pollfds[i].revents & POLLIN)//new info to read
+            try
             {
-                if (_pollfds[i].fd == _serverSocketFd)//from server
-                    accept_client();
-                else//from client
-                    recv_client(i);
+                if (_pollfds[i].revents & POLLIN)
+                {
+                    if (_pollfds[i].fd == _serverSocketFd)
+                        accept_client();
+                    else
+                        recv_client(i);
+                }
+                else if (_pollfds[i].revents & POLLHUP)
+                    quit_client(i);
             }
-            else if ((_pollfds[i].revents & POLLHUP) || (_pollfds[i].revents & POLLOUT)) //pollout???
-                quit_client(i);
+            catch (const std::exception &e)
+            {
+                std::cerr << "Error: poll loop" << std::endl;
+            }
         }
     }
     close(_serverSocketFd);

@@ -93,7 +93,26 @@ void Server::recv_client(int index)
 
 void Server::quit_client(int index)
 {
-    
+    for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
+    {
+        if (it->second.isMember(&_clients[_pollfds[index].fd]))
+        {
+            it->second.removeMember(&_clients[_pollfds[index].fd]);
+            //QUIT MESSAGE TO CHANNEL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            if (it->second.isEmpty())
+                _channels.erase(it++);
+            else
+                ++it;
+        }
+        else
+            ++it;
+    }
+    _clients.erase(_pollfds[index].fd);
+    close(_pollfds[index].fd);
+    _pollfds[index] = _pollfds[_nfds - 1];
+    _pollfds[index].events = POLLIN | POLLHUP;
+    _pollfds[_nfds - 1].fd = -1;
+    _nfds--;
 }
 
 void Server::start()

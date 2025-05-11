@@ -17,12 +17,15 @@ class Channel
         bool                _inviteOnly;
         bool                _topicRestricted;
         bool                _hasPassword;
-        std::list<Client *>  _users;
-        std::list<Client *>  _operators;
+        std::list<Client *> _members;
+        std::list<Client *> _operators;
 
     public:
         Channel();
         ~Channel();
+        bool isMember(Client *client);
+        void removeMember(Client *client);
+        bool isEmpty();
 };
 
 #endif

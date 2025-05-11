@@ -14,17 +14,19 @@
 #include <poll.h>
 #include <map>
 #include "Client.hpp"
+#include "Channel.hpp"
 
 class Server
 {
     private:
-        int                     _port;
-        std::string             _password;
-        pollfd                  _pollfds[SOMAXCONN];
-        nfds_t                  _nfds;
-        int                     _serverSocketFd;
-        bool                    _running;
-        std::map<int, Client>   _clients;
+        int                             _port;
+        std::string                     _password;
+        pollfd                          _pollfds[SOMAXCONN];
+        nfds_t                          _nfds;
+        int                             _serverSocketFd;
+        bool                            _running;
+        std::map<int, Client>           _clients;
+        std::map<std::string, Channel>  _channels;
 
     public:
         Server(int port, std::string password);

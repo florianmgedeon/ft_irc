@@ -39,6 +39,7 @@ class Server
         void        accept_client();
         void        recv_client(int index);
         void        quit_client(int index);
+        void        ft_send(int fd, const std::string message);
 };
 
 #endif

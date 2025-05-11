@@ -24,6 +24,17 @@ void Server::setRunning(bool running)
     _running = running;
 }
 
+
+void Server::ft_send(int fd, std::string message)
+{
+ //what do I do here?????
+}
+
+
+
+
+
+//============================================ poll loop ====================================//
 void Server::ft_socket()
 {
     struct sockaddr_in server_addr;
@@ -63,6 +74,7 @@ void Server::accept_client()
     int client_fd = accept(_serverSocketFd, (struct sockaddr*)&client_addr, &addrlen);
     if (client_fd == -1)
         throw std::runtime_error("accept() failed");
+    fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
     _clients[client_fd] = Client(hostname, client_fd);
     if (_nfds >= SOMAXCONN)
@@ -98,7 +110,7 @@ void Server::quit_client(int index)
         if (it->second.isMember(&_clients[_pollfds[index].fd]))
         {
             it->second.removeMember(&_clients[_pollfds[index].fd]);
-            //QUIT MESSAGE TO CHANNEL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            ft_send(_pollfds[index].fd, "");
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else
@@ -132,6 +144,10 @@ void Server::start()
                         accept_client();
                     else
                         recv_client(i);
+                }
+                else if (_pollfds[i].revents & POLLOUT)
+                {
+                    
                 }
                 else if (_pollfds[i].revents & POLLHUP)
                     quit_client(i);

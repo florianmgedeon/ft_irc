@@ -27,6 +27,17 @@ void Server::setRunning(bool running)
 
 void Server::ft_send(int fd, std::string message)
 {
+    Client &client = _clients[fd];
+    client.send_buffer += message + "\r\n";
+    client.setWrite(true);
+    for (int i = 0; i < _nfds; ++i)
+    {
+        if (_pollfds[i].fd == fd)
+        {
+            _pollfds[i].events |= POLLOUT;
+            break;
+        }
+    }
 }
 
 
@@ -56,9 +67,6 @@ void Server::handle_send(int index)
             quit_client(index);
     }
 }
-
-
-
 
 void Server::ft_socket()
 {
@@ -135,7 +143,7 @@ void Server::quit_client(int index)
         if (it->second.isMember(&_clients[_pollfds[index].fd]))
         {
             it->second.removeMember(&_clients[_pollfds[index].fd]);
-            ft_send(_pollfds[index].fd, "");
+            ft_send(_pollfds[index].fd, "Client disconnected");
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else

@@ -16,11 +16,12 @@ class Client
 
     public:
         std::string send_buffer;
-        void        setWrite(bool write);
-        int        getFd() const;
-        Client();
         Client(std::string hostname, int fd);
+        Client();
         ~Client();
+        void        setWrite(bool write);
+        int         getFd() const;
+        void        append_send_buffer(std::string message);
     };
 
 #endif

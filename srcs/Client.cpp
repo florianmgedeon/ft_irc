@@ -22,3 +22,8 @@ void Client::setWrite(bool write)
     write_ready = write;
 }
 
+//append_send_buffer
+void Client::append_send_buffer(std::string message)
+{
+    send_buffer += message;
+}

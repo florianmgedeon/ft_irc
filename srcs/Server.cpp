@@ -41,6 +41,43 @@ void Server::ft_send(int fd, std::string message)
 }
 
 
+void Server::create_command(int fd, char *buffer)
+{
+    Client &client = _clients[fd];
+    client.append_send_buffer(buffer);
+
+
+    size_t end_pos = client.send_buffer.find("\r\n");
+    while (end_pos != std::string::npos && end_pos < 512)
+    {
+        std::string complete_cmd = client.send_buffer.substr(0, end_pos);
+        client.send_buffer.erase(0, end_pos + 2);
+        Command command(complete_cmd, &client);
+        find_command(command);
+        if (_clients.find(fd) == _clients.end())
+            break;
+        end_pos = client.send_buffer.find("\r\n");
+    }
+}
+
+void Server::find_command(Command command)
+{
+    std::string cmd = command.getCommand();
+    if(cmd == "PING")
+        ping_command(command);
+    else if(cmd == "PONG")
+        pong_command(command);
+	else if (cmd == "KICK")
+		kick_command(command);
+	else if (cmd == "INVITE")
+		invite_command(command);
+	else if (cmd == "TOPIC")
+		topic_command(command);
+	else if (cmd == "MODE")
+		mode_command(command);
+    else {}
+        // Handle unknown command
+}
 
 
 
@@ -133,7 +170,7 @@ void Server::recv_client(int index)
             throw std::runtime_error("recv() failed");
     }
     else
-        ft_parsing(client_fd, buffer);
+        create_command(client_fd, buffer);
 }
 
 void Server::quit_client(int index)

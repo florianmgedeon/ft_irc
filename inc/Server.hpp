@@ -15,6 +15,7 @@
 #include <map>
 #include "Client.hpp"
 #include "Channel.hpp"
+#include "Command.hpp"
 
 class Server
 {
@@ -41,6 +42,8 @@ class Server
         void        quit_client(int index);
         void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
+        void        create_command(int fd, char *buffer);
+        void        find_command(Command command);
 };
 
 #endif

@@ -27,7 +27,6 @@ void Server::setRunning(bool running)
 
 void Server::ft_send(int fd, std::string message)
 {
- //what do I do here?????
 }
 
 
@@ -35,6 +34,32 @@ void Server::ft_send(int fd, std::string message)
 
 
 //============================================ poll loop ====================================//
+
+
+
+void Server::handle_send(int index)
+{
+    Client &client = _clients[_pollfds[index].fd];
+    if (!client.send_buffer.empty())
+    {
+        int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
+        if (bytes_sent > 0)
+        {
+            client.send_buffer.erase(0, bytes_sent);
+            if (client.send_buffer.empty())
+            {
+                client.setWrite(false);
+                _pollfds[index].events = POLLIN | POLLHUP;
+            }
+        }
+        else if (bytes_sent == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
+            quit_client(index);
+    }
+}
+
+
+
+
 void Server::ft_socket()
 {
     struct sockaddr_in server_addr;
@@ -146,9 +171,7 @@ void Server::start()
                         recv_client(i);
                 }
                 else if (_pollfds[i].revents & POLLOUT)
-                {
-                    
-                }
+                    handle_send(i);
                 else if (_pollfds[i].revents & POLLHUP)
                     quit_client(i);
             }

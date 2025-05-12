@@ -40,6 +40,7 @@ class Server
         void        recv_client(int index);
         void        quit_client(int index);
         void        ft_send(int fd, const std::string message);
+        void        handle_send(int index);
 };
 
 #endif

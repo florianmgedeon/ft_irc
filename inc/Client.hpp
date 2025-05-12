@@ -12,8 +12,12 @@ class Client
         std::string _hostname;
         std::string _serverName;
         int         _fd;
+        bool        write_ready;
 
     public:
+        std::string send_buffer;
+        void        setWrite(bool write);
+        int        getFd() const;
         Client();
         Client(std::string hostname, int fd);
         ~Client();

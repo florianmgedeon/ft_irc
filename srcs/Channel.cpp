@@ -34,3 +34,9 @@ bool Channel::isEmpty()
 {
     return _members.empty();
 }
+
+void Channel::addOperator(Client *client)
+{
+    if (isMember(client))
+        _operators.push_back(client);
+}

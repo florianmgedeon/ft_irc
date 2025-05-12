@@ -26,6 +26,7 @@ class Channel
         bool isMember(Client *client);
         void removeMember(Client *client);
         bool isEmpty();
+        void addOperator(Client *client);
 };
 
 #endif

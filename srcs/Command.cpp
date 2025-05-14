@@ -36,16 +36,13 @@ void Command::parseCommand()
     _allParams.erase(0, end);
 }
 
-void Server::ping_command(Command command)
+void Command::parseParams()
 {
-}
+    //_paramsVector preparation
 
-void Server::pong_command(Command command)
-{
 }
 
 void Server::kick_command(Command command)
 {
-    //NEEDS: command_client(op?), kicked-client(params), channel(params)
-
+    //command_client(op?), kicked-client(params), channel(params)
 }

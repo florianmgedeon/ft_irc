@@ -45,12 +45,13 @@ class Server
         void        create_command(int fd, char *buffer);
         void        find_command(Command command);
 
-        void ping_command(Command command);
-        void pong_command(Command command);
-        void kick_command(Command command);
-        void invite_command(Command command);
-        void topic_command(Command command);
-        void mode_command(Command command);
+        void        nick_command(Command command);
+        void        ping_command(Command command);
+        void        pong_command(Command command);
+        void        kick_command(Command command);
+        void        invite_command(Command command);
+        void        topic_command(Command command);
+        void        mode_command(Command command);
 };
 
 #endif

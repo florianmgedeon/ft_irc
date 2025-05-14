@@ -12,7 +12,8 @@ class Client
         std::string _hostname;
         std::string _serverName;
         int         _fd;
-        bool        write_ready;
+        bool        _write_ready;
+        bool        _isPasswordValid;
 
     public:
         std::string send_buffer;

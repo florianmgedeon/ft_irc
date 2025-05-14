@@ -10,6 +10,8 @@ Client::~Client()
 
 Client::Client(std::string hostname, int fd) : _hostname(hostname), _fd(fd)
 {
+    _write_ready = false;
+    _isPasswordValid = false;
 }
 
 int Client::getFd() const
@@ -19,7 +21,7 @@ int Client::getFd() const
 
 void Client::setWrite(bool write)
 {
-    write_ready = write;
+    _write_ready = write;
 }
 
 //append_send_buffer

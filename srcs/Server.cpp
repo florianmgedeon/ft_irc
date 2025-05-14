@@ -134,7 +134,7 @@ void Server::ft_socket()
     _nfds = 1;
     memset(_pollfds, 0, sizeof(_pollfds));
     _pollfds[0].fd = _serverSocketFd;
-    _pollfds[0].events = POLLIN | POLLOUT | POLLOUT;
+    _pollfds[0].events = POLLIN | POLLHUP | POLLOUT;
 }
 
 void Server::accept_client()

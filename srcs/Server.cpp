@@ -30,7 +30,7 @@ void Server::ft_send(int fd, std::string message)
     Client &client = _clients[fd];
     client.send_buffer += message + "\r\n";
     client.setWrite(true);
-    for (int i = 0; i < _nfds; ++i)
+    for (nfds_t i = 0; i < _nfds; ++i)
     {
         if (_pollfds[i].fd == fd)
         {
@@ -63,19 +63,19 @@ void Server::create_command(int fd, char *buffer)
 void Server::find_command(Command command)
 {
     std::string cmd = command.getCommand();
-    if(cmd == "PING")
-        ping_command(command);
-    else if(cmd == "PONG")
-        pong_command(command);
-	else if (cmd == "KICK")
-		kick_command(command);
-	else if (cmd == "INVITE")
-		invite_command(command);
-	else if (cmd == "TOPIC")
-		topic_command(command);
-	else if (cmd == "MODE")
-		mode_command(command);
-    else {}
+    // if(cmd == "PING")
+    //     ping_command(command);
+    // else if(cmd == "PONG")
+    //     pong_command(command);
+	// else if (cmd == "KICK")
+	// 	kick_command(command);
+	// else if (cmd == "INVITE")
+	// 	invite_command(command);
+	// else if (cmd == "TOPIC")
+	// 	topic_command(command);
+	// else if (cmd == "MODE")
+	// 	mode_command(command);
+    // else {}
         // Handle unknown command
 }
 
@@ -152,6 +152,7 @@ void Server::accept_client()
     _pollfds[_nfds].fd = client_fd;
     _pollfds[_nfds].events = POLLIN | POLLHUP;
     _nfds++;
+    std::cout << "Client connected" << std::endl;
 }
 
 void Server::recv_client(int index)
@@ -170,7 +171,8 @@ void Server::recv_client(int index)
             throw std::runtime_error("recv() failed");
     }
     else
-        create_command(client_fd, buffer);
+        std::cout << "Received: " << buffer << std::endl;
+        //create_command(client_fd, buffer);
 }
 
 void Server::quit_client(int index)
@@ -203,27 +205,28 @@ void Server::start()
     while(_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)
-            throw std::runtime_error("poll() failed");
-        for (int i = 0; i < _nfds; ++i)
+        throw std::runtime_error("poll() failed");
+        for (nfds_t i = 0; i < _nfds; ++i)
         {
             try
             {
                 if (_pollfds[i].revents & POLLIN)
                 {
                     if (_pollfds[i].fd == _serverSocketFd)
-                        accept_client();
+                    accept_client();
                     else
-                        recv_client(i);
+                    recv_client(i);
                 }
                 else if (_pollfds[i].revents & POLLOUT)
-                    handle_send(i);
+                handle_send(i);
                 else if (_pollfds[i].revents & POLLHUP)
-                    quit_client(i);
+                quit_client(i);
             }
             catch (const std::exception &e)
             {
                 std::cerr << "Error: poll loop" << std::endl;
             }
+            std::cout << "Waiting for events..." << std::endl;
         }
     }
     close(_serverSocketFd);

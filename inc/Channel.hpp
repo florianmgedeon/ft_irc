@@ -13,10 +13,10 @@ class Channel
         std::string         _name;
         std::string         _topic;                  
         std::string         _password;                
-        int                 _userLimit;              
-        bool                _inviteOnly;
-        bool                _topicRestricted;
-        bool                _hasPassword;
+        //int                 _userLimit;              
+        //bool                _inviteOnly;
+        //bool                _topicRestricted;
+        //bool                _hasPassword;
         std::list<Client *> _members;
         std::list<Client *> _operators;
 

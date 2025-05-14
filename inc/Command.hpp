@@ -10,8 +10,8 @@ class Client;
 class Command
 {
     private:
-        Client*                     _client;
         std::string                 _completeCommand;
+        Client*                     _client;
         std::string                 _allParams;
         std::string                 _command;
         std::vector<std::string>    _paramsVector;

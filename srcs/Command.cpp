@@ -42,7 +42,7 @@ void Command::parseParams()
 
 }
 
-void Server::kick_command(Command command)
-{
-    //command_client(op?), kicked-client(params), channel(params)
-}
+// void Server::kick_command(Command command)
+// {
+//     //command_client(op?), kicked-client(params), channel(params)
+// }

@@ -16,6 +16,11 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "Command.hpp"
+#include <cerrno>
+
+class Channel;
+class Command;
+class Client;
 
 class Server
 {
@@ -47,11 +52,11 @@ class Server
 
         void        nick_command(Command command);
         void        ping_command(Command command);
-        void        pong_command(Command command);
-        void        kick_command(Command command);
-        void        invite_command(Command command);
-        void        topic_command(Command command);
-        void        mode_command(Command command);
+        // void        pong_command(Command command);
+        // void        kick_command(Command command);
+        // void        invite_command(Command command);
+        // void        topic_command(Command command);
+        // void        mode_command(Command command);
 };
 
 #endif

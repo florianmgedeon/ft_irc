@@ -17,17 +17,18 @@ int main (int ac, char **av)
         std::cerr << "Usage: ./ircserv <port> <password>" << std::endl;
         return 1;
     }
-    //server constructor
     try
     {
         int port = checkPort(av[1]);
+        if (strlen(av[2]) == 0)
+            throw std::invalid_argument("Password cannot be empty");
         Server server(port, av[2]);
-        std::cout << server.getPort() << std::endl;
-        std::cout << server.getPassword() << std::endl;
+        server.start();
     }
     catch (const std::exception &e)
     {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
+    return 0;
 }

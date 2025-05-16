@@ -166,7 +166,11 @@ void Server::recv_client(int index)
     if (bytes_received <= 0)
     {
         if (bytes_received == 0)
+        {
             std::cout << "Client disconnected" << std::endl;
+            quit_client(index);
+            return;
+        }
         else
             throw std::runtime_error("recv() failed");
     }
@@ -193,9 +197,17 @@ void Server::quit_client(int index)
     }
     _clients.erase(_pollfds[index].fd);
     close(_pollfds[index].fd);
-    _pollfds[index] = _pollfds[_nfds - 1];
-    _pollfds[index].events = POLLIN | POLLHUP;
-    _pollfds[_nfds - 1].fd = -1;
+    if (_nfds > 1)
+    {
+        _pollfds[index] = _pollfds[_nfds - 1];
+        _pollfds[_nfds - 1].fd = -1;
+        _pollfds[_nfds - 1].events = 0;
+    }
+    else
+    {
+        _pollfds[index].fd = -1;
+        _pollfds[index].events = 0;
+    }
     _nfds--;
 }
 
@@ -205,7 +217,7 @@ void Server::start()
     while(_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)
-        throw std::runtime_error("poll() failed");
+            throw std::runtime_error("poll() failed");
         for (nfds_t i = 0; i < _nfds; ++i)
         {
             try
@@ -213,14 +225,14 @@ void Server::start()
                 if (_pollfds[i].revents & POLLIN)
                 {
                     if (_pollfds[i].fd == _serverSocketFd)
-                    accept_client();
+                        accept_client();
                     else
-                    recv_client(i);
+                        recv_client(i);
                 }
                 else if (_pollfds[i].revents & POLLOUT)
-                handle_send(i);
+                    handle_send(i);
                 else if (_pollfds[i].revents & POLLHUP)
-                quit_client(i);
+                    quit_client(i);
             }
             catch (const std::exception &e)
             {

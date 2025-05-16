@@ -43,8 +43,8 @@ class Server
         void        start();
         void        ft_socket();
         void        accept_client();
-        void        recv_client(int index);
-        void        quit_client(int index);
+        bool        recv_client(int index);
+        bool        quit_client(int index);
         void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
         void        create_command(int fd, char *buffer);

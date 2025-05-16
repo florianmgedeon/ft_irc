@@ -155,38 +155,45 @@ void Server::accept_client()
     std::cout << "Client connected" << std::endl;
 }
 
-void Server::recv_client(int index)
+bool Server::recv_client(int index)
 {
-    char    buffer[512];
-    int     bytes_received;
-    int     client_fd = _pollfds[index].fd;
-
+    char buffer[512];
+    int client_fd = _pollfds[index].fd;
     memset(buffer, 0, sizeof(buffer));
-    bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-    if (bytes_received <= 0)
+    int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+
+    if (bytes_received == 0)
     {
-        if (bytes_received == 0)
-        {
-            std::cout << "Client disconnected" << std::endl;
-            quit_client(index);
-            return;
-        }
-        else
-            throw std::runtime_error("recv() failed");
+        return quit_client(index); // true = client removed
+    }
+    else if (bytes_received < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return false;
+        std::cerr << "recv() failed: " << strerror(errno) << std::endl;
+        throw std::runtime_error("recv() failed");
     }
     else
+    {
         std::cout << "Received: " << buffer << std::endl;
         //create_command(client_fd, buffer);
+        return false;
+    }
 }
 
-void Server::quit_client(int index)
+bool Server::quit_client(int index)
 {
+    int fd = _pollfds[index].fd;
+
+    if (_clients.find(fd) == _clients.end())
+        return false; // already removed
+
     for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
     {
-        if (it->second.isMember(&_clients[_pollfds[index].fd]))
+        if (it->second.isMember(&_clients[fd]))
         {
-            it->second.removeMember(&_clients[_pollfds[index].fd]);
-            ft_send(_pollfds[index].fd, "Client disconnected");
+            it->second.removeMember(&_clients[fd]);
+            ft_send(fd, "Client disconnected");
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else
@@ -195,8 +202,10 @@ void Server::quit_client(int index)
         else
             ++it;
     }
-    _clients.erase(_pollfds[index].fd);
-    close(_pollfds[index].fd);
+
+    _clients.erase(fd);
+    close(fd);
+
     if (_nfds > 1)
     {
         _pollfds[index] = _pollfds[_nfds - 1];
@@ -208,37 +217,61 @@ void Server::quit_client(int index)
         _pollfds[index].fd = -1;
         _pollfds[index].events = 0;
     }
+
     _nfds--;
+    std::cout << "Client disconnected" << std::endl;
+    return true;
 }
+
 
 void Server::start()
 {
     ft_socket();
-    while(_running)
+    while (_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)
             throw std::runtime_error("poll() failed");
-        for (nfds_t i = 0; i < _nfds; ++i)
+
+        nfds_t i = 0;
+        while (i < _nfds)
         {
+            int fd = _pollfds[i].fd;
+            short revents = _pollfds[i].revents;
+            bool client_removed = false;
+
             try
             {
-                if (_pollfds[i].revents & POLLIN)
+                if (revents & POLLIN)
                 {
-                    if (_pollfds[i].fd == _serverSocketFd)
+                    if (fd == _serverSocketFd)
+                    {
                         accept_client();
+                    }
                     else
-                        recv_client(i);
+                    {
+                        client_removed = recv_client(i); // now reliable
+                    }
                 }
-                else if (_pollfds[i].revents & POLLOUT)
+                if (!client_removed && (revents & POLLOUT))
+                {
                     handle_send(i);
-                else if (_pollfds[i].revents & POLLHUP)
-                    quit_client(i);
+                }
+                if (!client_removed && (revents & POLLHUP))
+                {
+                    client_removed = quit_client(i);
+                }
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error: poll loop" << std::endl;
+                std::cerr << "Error in poll loop: " << e.what() << std::endl;
+                client_removed = quit_client(i);
             }
+
+            if (!client_removed)
+                ++i;
+
             std::cout << "Waiting for events..." << std::endl;
+            std::cout << "Number of clients: " << (_nfds - 1) << std::endl; // subtract server socket
         }
     }
     close(_serverSocketFd);

@@ -227,15 +227,18 @@ bool Server::quit_client(int index)
 void Server::start()
 {
     ft_socket();
+
     while (_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)
             throw std::runtime_error("poll() failed");
 
-        nfds_t i = 0;
+        if (_pollfds[0].revents & POLLIN)
+            accept_client();
+
+        nfds_t i = 1;
         while (i < _nfds)
         {
-            int fd = _pollfds[i].fd;
             short revents = _pollfds[i].revents;
             bool client_removed = false;
 
@@ -243,14 +246,7 @@ void Server::start()
             {
                 if (revents & POLLIN)
                 {
-                    if (fd == _serverSocketFd)
-                    {
-                        accept_client();
-                    }
-                    else
-                    {
-                        client_removed = recv_client(i); // now reliable
-                    }
+                    client_removed = recv_client(i);
                 }
                 if (!client_removed && (revents & POLLOUT))
                 {
@@ -271,7 +267,7 @@ void Server::start()
                 ++i;
 
             std::cout << "Waiting for events..." << std::endl;
-            std::cout << "Number of clients: " << (_nfds - 1) << std::endl; // subtract server socket
+            std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
         }
     }
     close(_serverSocketFd);

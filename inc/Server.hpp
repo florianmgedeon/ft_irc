@@ -33,6 +33,7 @@ class Server
         bool                            _running;
         std::map<int, Client>           _clients;
         std::map<std::string, Channel>  _channels;
+        std::string                     _serverName;
 
     public:
         Server(int port, std::string password);
@@ -49,9 +50,11 @@ class Server
         void        handle_send(int index);
         void        create_command(int fd, char *buffer);
         void        find_command(Command command);
+        void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg);
 
         void        nick_command(Command command);
-        void        ping_command(Command command);
+        void        user_command(Command command);
+        // void        ping_command(Command command);
         // void        pong_command(Command command);
         // void        kick_command(Command command);
         // void        invite_command(Command command);

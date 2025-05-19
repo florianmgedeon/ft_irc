@@ -30,6 +30,11 @@ void Client::append_send_buffer(std::string message)
     send_buffer += message;
 }
 
+void Client::append_recv_buffer(char *buffer)
+{
+    recv_buffer += buffer;
+}
+
 void Client::setNickname(std::string nickname)
 {
     _nickname = nickname;

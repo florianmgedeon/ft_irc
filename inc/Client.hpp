@@ -19,12 +19,14 @@ class Client
 
     public:
         std::string send_buffer;
+        std::string recv_buffer;
         Client(std::string hostname, int fd);
         Client();
         ~Client();
         void        setWrite(bool write);
         int         getFd() const;
         void        append_send_buffer(std::string message);
+        void        append_recv_buffer(char *buffer);
         void        setNickname(std::string nickname);
         std::string getNickname() const;
         bool        getIsRegistered() const;

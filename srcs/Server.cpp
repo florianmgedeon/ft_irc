@@ -30,6 +30,7 @@ void Server::ft_send(int fd, std::string message)
     Client &client = _clients[fd];
     if (client.getFd() == -1)
         return;
+    client.send_buffer.clear();//??????????????????????????
     client.send_buffer += message + "\r\n";
     client.setWrite(true);
     for (nfds_t i = 0; i < _nfds; ++i)
@@ -47,18 +48,18 @@ void Server::ft_send(int fd, std::string message)
 void Server::create_command(int fd, char *buffer)
 {
     Client &client = _clients[fd];
-    client.append_send_buffer(buffer);
+    client.append_recv_buffer(buffer);
 
-    size_t end_pos = client.send_buffer.find("\r\n");
+    size_t end_pos = client.recv_buffer.find("\r\n");
     while (end_pos != std::string::npos && end_pos < 512)
     {
-        std::string complete_cmd = client.send_buffer.substr(0, end_pos);
-        client.send_buffer.erase(0, end_pos + 2);
+        std::string complete_cmd = client.recv_buffer.substr(0, end_pos);
+        client.recv_buffer.erase(0, end_pos + 2);
         Command command(complete_cmd, &client);
         find_command(command);
         if (_clients.find(fd) == _clients.end())
             break;
-        end_pos = client.send_buffer.find("\r\n");
+        end_pos = client.recv_buffer.find("\r\n");
     }
 }
 

@@ -52,12 +52,9 @@ void Server::create_command(int fd, char *buffer)
     size_t end_pos = client.send_buffer.find("\r\n");
     while (end_pos != std::string::npos && end_pos < 512)
     {
-        std::cout << "found end sequence" << std::endl;
         std::string complete_cmd = client.send_buffer.substr(0, end_pos);
         client.send_buffer.erase(0, end_pos + 2);
-        std::cout << "complete_cmd: " << complete_cmd << std::endl;
         Command command(complete_cmd, &client);
-        std::cout << "command created: " << command.getCommand() << std::endl;
         find_command(command);
         if (_clients.find(fd) == _clients.end())
             break;
@@ -70,17 +67,18 @@ void Server::find_command(Command command)
     std::string cmd = command.getCommand();
     if (cmd == "CAP")
     {
-        std::cout << "CAP command received" << std::endl;
         cap_command(command);
+    }
+    else if (cmd == "PASS")
+    {
+        pass_command(command);
     }
     else if (cmd == "NICK")
     {
-        std::cout << "NICK command received" << std::endl;
         nick_command(command);
     }
     else if (cmd == "USER")
     {
-        std::cout << "USER command received" << std::endl;
         user_command(command);
     }
     // else if(cmd == "PING")
@@ -110,19 +108,60 @@ void Server::numeric_reply(int fd, const std::string& code, const std::string& t
 //cap_command
 void Server::cap_command(Command command)
 {
-    Client &client = *command.getClient();
-
-    std::string cap_response = ":" + _serverName + " CAP * LS :multi-prefix\r\n";
-    ft_send(client.getFd(), cap_response);
-    nfds_t i = 1;
-    while (i < _nfds)
+    if (command.getParams()[0] == "LS")
     {
-        if (_pollfds[i].fd == client.getFd())
-            break;
-        i++;
+        Client &client = *command.getClient();
+
+        std::string cap_response = ":" + _serverName + " CAP * LS :multi-prefix\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
     }
-    std::cout << "handle_send(cap_response) called" << std::endl;
-    handle_send(i);
+
+    if (command.getParams()[0] == "REQ")
+    {
+        Client &client = *command.getClient();
+        std::string cap_response = ":" + _serverName + " CAP * ACK :multi-prefix\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
+    }
+
+    if (command.getParams()[0] == "END")
+    {
+        Client &client = *command.getClient();
+        std::string cap_response = ":" + _serverName + " CAP * END\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
+    }
+}
+
+void Server::pass_command(Command command)
+{
+    std::string password = command.getParams()[0];
+    // Client &client = *command.getClient();
 }
 
 void Server::nick_command(Command command)
@@ -220,10 +259,9 @@ void Server::handle_send(int index)
     if (!client.send_buffer.empty())
     {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
-        std::cout << "bytes sent: " << bytes_sent << std::endl;
-        std::cout << "sent_buffer: " << client.send_buffer << std::endl;
         if (bytes_sent > 0)
         {
+            std::cout << "buffer from send: " << client.send_buffer.c_str() << std::endl;
             client.send_buffer.erase(0, bytes_sent);
             if (client.send_buffer.empty())
             {
@@ -283,7 +321,6 @@ void Server::accept_client()
     _pollfds[_nfds].fd = client_fd;
     _pollfds[_nfds].events = POLLIN | POLLHUP;
     _nfds++;
-    std::cout << "accept_client() done" << std::endl;
 }
 
 bool Server::recv_client(int index)
@@ -295,10 +332,6 @@ bool Server::recv_client(int index)
     //     return false;
     memset(buffer, 0, sizeof(buffer));
     int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-    
-    std::cout << "bytes received: " << bytes_received << std::endl;
-    std::cout << "buffer: " << buffer << std::endl;
-
     if (bytes_received == 0)
         return quit_client(index); // true = client removed
     else if (bytes_received < 0)
@@ -309,7 +342,7 @@ bool Server::recv_client(int index)
     }
     else
     {
-        std::cout << "creating command from buffer" << std::endl;
+        std::cout << "buffer from recv: " << buffer << std::endl;
         create_command(client_fd, buffer);
         return false;
     }
@@ -388,7 +421,7 @@ void Server::start()
             if (!client_removed)
                 ++i;
         }
-        std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
+        //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
     }
     close(_serverSocketFd);
 }

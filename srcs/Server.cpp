@@ -3,6 +3,7 @@
 Server::Server(int port, std::string password) : _port(port), _password(password)
 {   
     _running = true;
+    _serverName = "ircserv";
 }
 
 Server::~Server()
@@ -24,46 +25,64 @@ void Server::setRunning(bool running)
     _running = running;
 }
 
-
 void Server::ft_send(int fd, std::string message)
 {
     Client &client = _clients[fd];
+    if (client.getFd() == -1)
+        return;
+    client.send_buffer.clear();//??????????????????????????
     client.send_buffer += message + "\r\n";
     client.setWrite(true);
     for (nfds_t i = 0; i < _nfds; ++i)
     {
         if (_pollfds[i].fd == fd)
         {
+            if (_pollfds[i].events & POLLOUT)
+                return;
             _pollfds[i].events |= POLLOUT;
             break;
         }
     }
 }
 
-
 void Server::create_command(int fd, char *buffer)
 {
     Client &client = _clients[fd];
-    client.append_send_buffer(buffer);
+    client.append_recv_buffer(buffer);
 
-
-    size_t end_pos = client.send_buffer.find("\r\n");
+    size_t end_pos = client.recv_buffer.find("\r\n");
     while (end_pos != std::string::npos && end_pos < 512)
     {
-        std::string complete_cmd = client.send_buffer.substr(0, end_pos);
-        client.send_buffer.erase(0, end_pos + 2);
+        std::string complete_cmd = client.recv_buffer.substr(0, end_pos);
+        client.recv_buffer.erase(0, end_pos + 2);
         Command command(complete_cmd, &client);
         find_command(command);
         if (_clients.find(fd) == _clients.end())
             break;
-        end_pos = client.send_buffer.find("\r\n");
+        end_pos = client.recv_buffer.find("\r\n");
     }
 }
 
 void Server::find_command(Command command)
 {
     std::string cmd = command.getCommand();
-    // if(cmd == "PING")
+    if (cmd == "CAP")
+    {
+        cap_command(command);
+    }
+    else if (cmd == "PASS")
+    {
+        pass_command(command);
+    }
+    else if (cmd == "NICK")
+    {
+        nick_command(command);
+    }
+    else if (cmd == "USER")
+    {
+        user_command(command);
+    }
+    // else if(cmd == "PING")
     //     ping_command(command);
     // else if(cmd == "PONG")
     //     pong_command(command);
@@ -79,6 +98,156 @@ void Server::find_command(Command command)
         // Handle unknown command
 }
 
+//============================================ commands ====================================//
+
+void Server::numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg)
+{
+    std::string response = ":" + _serverName + " " + code + " " + target + " :" + msg;
+    ft_send(fd, response);//should be handle_send
+}
+
+//cap_command
+void Server::cap_command(Command command)
+{
+    if (command.getParams()[0] == "LS")
+    {
+        Client &client = *command.getClient();
+
+        std::string cap_response = ":" + _serverName + " CAP * LS :multi-prefix\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
+    }
+
+    if (command.getParams()[0] == "REQ")
+    {
+        Client &client = *command.getClient();
+        std::string cap_response = ":" + _serverName + " CAP * ACK :multi-prefix\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
+    }
+
+    if (command.getParams()[0] == "END")
+    {
+        Client &client = *command.getClient();
+        std::string cap_response = ":" + _serverName + " CAP * END\r\n";
+        ft_send(client.getFd(), cap_response);
+        nfds_t i = 1;
+        while (i < _nfds)
+        {
+            if (_pollfds[i].fd == client.getFd())
+                break;
+            i++;
+        }
+        handle_send(i);
+        return;
+    }
+}
+
+void Server::pass_command(Command command)
+{
+    std::string password = command.getParams()[0];
+    // Client &client = *command.getClient();
+}
+
+void Server::nick_command(Command command)
+{
+    std::string nickname = command.getParams()[0];
+    Client &client = *command.getClient();
+
+    if (nickname.empty())
+    {
+        numeric_reply(client.getFd(), "431", "*", "No nickname given");
+        return;
+    }
+
+    if (nickname.length() > 9 || nickname.find_first_of(" \r\n") != std::string::npos || nickname[0] == '#')
+    {
+        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
+        return;
+    }
+
+    if (nickname.find_first_not_of("0123456789") == std::string::npos)
+    {
+        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
+        return;
+    }
+
+    for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+    {
+        if (&it->second != &client && it->second.getNickname() == nickname)
+        {
+            numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use");//collision must be implemented!!!
+            return;
+        }
+    }
+
+    client.setNickname(nickname);
+}
+
+void Server::user_command(Command command)
+{
+    std::string username = command.getParams()[0];
+    std::string hostname = command.getParams()[1];
+    std::string servername = command.getParams()[2];
+    std::string realname = command.getParams()[3];
+    Client &client = *command.getClient();
+
+    if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
+    {
+        numeric_reply(client.getFd(), "461", "USER", "Not enough parameters");
+        return;
+    }
+
+    if (username.length() > 9 || username.find_first_of(" \r\n") != std::string::npos || username[0] == '#')
+    {
+        numeric_reply(client.getFd(), "461", "USER", "Erroneous username");
+        return;
+    }
+    if (hostname.length() > 9 || hostname.find_first_of(" \r\n") != std::string::npos || hostname[0] == '#')
+    {
+        numeric_reply(client.getFd(), "461", "USER", "Erroneous hostname");
+        return;
+    }
+    if (servername.length() > 9 || servername.find_first_of(" \r\n") != std::string::npos || servername[0] == '#')
+    {
+        numeric_reply(client.getFd(), "461", "USER", "Erroneous servername");
+        return;
+    }
+    if (realname.length() > 9 || realname.find_first_of(" \r\n") != std::string::npos || realname[0] == '#')
+    {
+        numeric_reply(client.getFd(), "461", "USER", "Erroneous realname");
+        return;
+    }
+
+    client.setUsername(username);
+    client.setHostname(hostname);
+    client.setServername(servername);
+    client.setRealname(realname);
+    client.setIsRegistered(true);
+
+    client.setWrite(true);
+    client.send_buffer += ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname + "\r\n";
+}
+
+
+
+
 
 
 //============================================ poll loop ====================================//
@@ -93,6 +262,7 @@ void Server::handle_send(int index)
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
         if (bytes_sent > 0)
         {
+            std::cout << "buffer from send: " << client.send_buffer.c_str() << std::endl;
             client.send_buffer.erase(0, bytes_sent);
             if (client.send_buffer.empty())
             {
@@ -152,37 +322,46 @@ void Server::accept_client()
     _pollfds[_nfds].fd = client_fd;
     _pollfds[_nfds].events = POLLIN | POLLHUP;
     _nfds++;
-    std::cout << "Client connected" << std::endl;
 }
 
-void Server::recv_client(int index)
+bool Server::recv_client(int index)
 {
-    char    buffer[512];
-    int     bytes_received;
-    int     client_fd = _pollfds[index].fd;
-
+    char buffer[512];
+    int client_fd = _pollfds[index].fd;
+    // Client &client = _clients[client_fd];
+    // if (!client.getIsRegistered())
+    //     return false;
     memset(buffer, 0, sizeof(buffer));
-    bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-    if (bytes_received <= 0)
+    int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+    if (bytes_received == 0)
+        return quit_client(index); // true = client removed
+    else if (bytes_received < 0)
     {
-        if (bytes_received == 0)
-            std::cout << "Client disconnected" << std::endl;
-        else
-            throw std::runtime_error("recv() failed");
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return false;
+        throw std::runtime_error("recv() failed");
     }
     else
-        std::cout << "Received: " << buffer << std::endl;
-        //create_command(client_fd, buffer);
+    {
+        std::cout << "buffer from recv: " << buffer << std::endl;
+        create_command(client_fd, buffer);
+        return false;
+    }
 }
 
-void Server::quit_client(int index)
+bool Server::quit_client(int index)
 {
+    int fd = _pollfds[index].fd;
+
+    if (_clients.find(fd) == _clients.end())
+        return false; // already removed
+
     for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
     {
-        if (it->second.isMember(&_clients[_pollfds[index].fd]))
+        if (it->second.isMember(&_clients[fd]))
         {
-            it->second.removeMember(&_clients[_pollfds[index].fd]);
-            ft_send(_pollfds[index].fd, "Client disconnected");
+            it->second.removeMember(&_clients[fd]);
+            //ft_send(fd, "Client disconnected"); //broadcast?
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else
@@ -191,43 +370,59 @@ void Server::quit_client(int index)
         else
             ++it;
     }
-    _clients.erase(_pollfds[index].fd);
-    close(_pollfds[index].fd);
-    _pollfds[index] = _pollfds[_nfds - 1];
-    _pollfds[index].events = POLLIN | POLLHUP;
-    _pollfds[_nfds - 1].fd = -1;
+
+    _clients.erase(fd);
+    close(fd);
+
+    if (_nfds > 2)
+    {
+        _pollfds[index] = _pollfds[_nfds - 1];
+        _pollfds[_nfds - 1].fd = -1;
+        _pollfds[_nfds - 1].events = 0;
+    }
+    else if (_nfds == 2)
+    {
+        _pollfds[index].fd = -1;
+        _pollfds[index].events = 0;
+    }
+
     _nfds--;
+    std::cout << "Client disconnected" << std::endl;
+    return true;
 }
 
 void Server::start()
 {
     ft_socket();
-    while(_running)
+    while (_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)
-        throw std::runtime_error("poll() failed");
-        for (nfds_t i = 0; i < _nfds; ++i)
+            throw std::runtime_error("poll() failed");
+        if (_pollfds[0].revents & POLLIN)
+            accept_client();
+        nfds_t i = 1;
+        while (i < _nfds)
         {
+            short revents = _pollfds[i].revents;
+            bool client_removed = false;
             try
             {
-                if (_pollfds[i].revents & POLLIN)
-                {
-                    if (_pollfds[i].fd == _serverSocketFd)
-                    accept_client();
-                    else
-                    recv_client(i);
-                }
-                else if (_pollfds[i].revents & POLLOUT)
-                handle_send(i);
-                else if (_pollfds[i].revents & POLLHUP)
-                quit_client(i);
+                if (revents & POLLIN)
+                    client_removed = recv_client(i);
+                if (!client_removed && (revents & POLLOUT))
+                    handle_send(i);
+                if (!client_removed && (revents & POLLHUP))
+                    client_removed = quit_client(i);
             }
             catch (const std::exception &e)
             {
-                std::cerr << "Error: poll loop" << std::endl;
+                std::cerr << "Error in poll loop: " << e.what() << std::endl;
+                client_removed = quit_client(i);
             }
-            std::cout << "Waiting for events..." << std::endl;
+            if (!client_removed)
+                ++i;
         }
+        //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
     }
     close(_serverSocketFd);
 }

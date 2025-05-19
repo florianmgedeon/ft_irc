@@ -4,6 +4,7 @@
 #include "Server.hpp"
 #include "Client.hpp"
 #include <vector>
+#include <sstream>
 
 class Client;
 
@@ -24,6 +25,8 @@ class Command
         Client*     getClient() const;
         void        parseCommand();
         void        parseParams();
+        //getParams
+        std::vector<std::string> getParams() const;
 };
 
 #endif

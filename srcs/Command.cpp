@@ -38,11 +38,31 @@ void Command::parseCommand()
 
 void Command::parseParams()
 {
-    //_paramsVector preparation
+    _paramsVector.clear();
 
+    std::istringstream iss(_allParams);
+    std::string token;
+
+    while (iss >> token)
+    {
+        if (token[0] == ':')
+        {
+            std::string trailing = token.substr(1); // remove leading ':'
+            std::string rest;
+            std::getline(iss, rest); // get the rest of the line
+            if (!rest.empty())
+                trailing += rest;
+            _paramsVector.push_back(trailing);
+            break;
+        }
+        else
+        {
+            _paramsVector.push_back(token);
+        }
+    }
 }
 
-// void Server::kick_command(Command command)
-// {
-//     //command_client(op?), kicked-client(params), channel(params)
-// }
+std::vector<std::string> Command::getParams() const
+{
+    return _paramsVector;
+}

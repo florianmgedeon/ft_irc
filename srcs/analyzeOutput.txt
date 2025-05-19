@@ -1,0 +1,55 @@
+
+
+bash-3.2$ ./ircserv 10000 test
+accept_client() done
+Number of clients: 1
+bytes received: 20
+buffer: CAP LS 302
+JOIN :
+
+creating command from buffer
+found end sequence
+complete_cmd: CAP LS 302
+command created: CAP
+CAP command received
+handle_send(cap_response) called
+bytes sent: 43
+send_buffer: JOIN :
+:ircserv CAP * LS :multi-prefix
+
+
+Number of clients: 1
+bytes received: 23
+buffer: CAP REQ :multi-prefix
+
+creating command from buffer
+found end sequence
+complete_cmd: CAP REQ :multi-prefix
+command created: CAP
+CAP command received
+handle_send(cap_response) called
+bytes sent: 35
+send_buffer: :ircserv CAP * LS :multi-prefix
+
+
+Number of clients: 1
+bytes received: 100
+buffer: CAP END
+PASS test
+NICK floriangedeon
+USER floriangedeon floriangedeon 127.0.0.1 :Florian Gedeon
+
+creating command from buffer
+found end sequence
+complete_cmd: CAP END
+command created: CAP
+CAP command received
+handle_send(cap_response) called
+bytes sent: 126
+send_buffer: PASS test
+NICK floriangedeon
+USER floriangedeon floriangedeon 127.0.0.1 :Florian Gedeon
+:ircserv CAP * LS :multi-prefix
+
+
+Number of

@@ -52,6 +52,7 @@ class Server
         void        find_command(Command command);
         void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg);
 
+        void        cap_command(Command command);
         void        nick_command(Command command);
         void        user_command(Command command);
         // void        ping_command(Command command);

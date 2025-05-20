@@ -4,6 +4,8 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 {   
     _running = true;
     _serverName = "ircserv";
+    _serverSocketFd = -1;
+    _nfds = 0;
 }
 
 Server::~Server()
@@ -15,7 +17,7 @@ int Server::getPort() const
     return _port;
 }
 
-std::string Server::getPassword() const
+const std::string &Server::getPassword() const
 {
     return _password;
 }
@@ -25,12 +27,30 @@ void Server::setRunning(bool running)
     _running = running;
 }
 
+std::vector<Client>::iterator 	Server::getClient(int fd) {
+	std::vector<Client>::iterator i = _clients.begin();
+	for (; i != _clients.end(); i++)
+		if ((*i).getFd() == fd)
+			break;
+	return i;
+}
+
+std::vector<Client>::iterator 	Server::getClient(const std::string nickname) {
+	std::vector<Client>::iterator i = _clients.begin();
+	for (; i != _clients.end(); i++) {
+		std::string temp = (*i).getNickname();
+		if (!temp.compare(nickname.c_str()))
+			break;
+	}
+	return i;
+}
+
 void Server::ft_send(int fd, std::string message)
 {
-    Client &client = _clients[fd];
+    Client &client = *(getClient(fd));
     if (client.getFd() == -1)
         return;
-    client.send_buffer.clear();//??????????????????????????
+//    client.send_buffer.clear();//??????????????????????????
     client.send_buffer += message + "\r\n";
     client.setWrite(true);
     for (nfds_t i = 0; i < _nfds; ++i)
@@ -47,20 +67,20 @@ void Server::ft_send(int fd, std::string message)
 
 void Server::create_command(int fd, char *buffer)
 {
-    Client &client = _clients[fd];
-    client.append_recv_buffer(buffer);
+    Client &client = *(getClient(fd));
+	client.append_recv_buffer(buffer);
 
-    size_t end_pos = client.recv_buffer.find("\r\n");
-    while (end_pos != std::string::npos && end_pos < 512)
-    {
-        std::string complete_cmd = client.recv_buffer.substr(0, end_pos);
-        client.recv_buffer.erase(0, end_pos + 2);
-        Command command(complete_cmd, &client);
-        find_command(command);
-        if (_clients.find(fd) == _clients.end())
-            break;
-        end_pos = client.recv_buffer.find("\r\n");
-    }
+	size_t end_pos = client.recv_buffer.find("\r\n");
+	while (end_pos != std::string::npos && end_pos < 512)
+	{
+		std::string complete_cmd = client.recv_buffer.substr(0, end_pos);
+		client.recv_buffer.erase(0, end_pos + 2);
+		Command command(complete_cmd, &client);
+		find_command(command);
+		if (getClient(fd) == _clients.end())
+			break;
+		end_pos = client.recv_buffer.find("\r\n");
+	}
 }
 
 void Server::find_command(Command command)
@@ -187,16 +207,12 @@ void Server::nick_command(Command command)
         numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
         return;
     }
-
-    for (std::map<int, Client>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-    {
-        if (&it->second != &client && it->second.getNickname() == nickname)
+    std::vector<Client>::iterator check = getClient(nickname);
+    if (check == _clients.end())
         {
             numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use");//collision must be implemented!!!
             return;
         }
-    }
-
     client.setNickname(nickname);
 }
 
@@ -316,7 +332,7 @@ void Server::accept_client()
         throw std::runtime_error("accept() failed");
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
-    _clients[client_fd] = Client(hostname, client_fd);
+    _clients.push_back(Client(hostname, &_pollfds[_nfds]));
     if (_nfds >= SOMAXCONN)
         throw std::runtime_error("Too many clients");
     _pollfds[_nfds].fd = client_fd;
@@ -353,7 +369,7 @@ bool Server::quit_client(int index)
 {
     int fd = _pollfds[index].fd;
 
-    if (_clients.find(fd) == _clients.end())
+    if (getClient(fd) == _clients.end())
         return false; // already removed
 
     for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
@@ -371,7 +387,7 @@ bool Server::quit_client(int index)
             ++it;
     }
 
-    _clients.erase(fd);
+//    _clients.erase(fd);
     close(fd);
 
     if (_nfds > 2)
@@ -394,6 +410,7 @@ bool Server::quit_client(int index)
 void Server::start()
 {
     ft_socket();
+    std::cout << "Socket open, awaiting clients." << std::endl;
     while (_running)
     {
         if (poll(_pollfds, _nfds, -1) == -1)

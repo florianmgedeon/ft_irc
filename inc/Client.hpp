@@ -12,15 +12,15 @@ class Client
         std::string _realname;
         std::string _hostname;
         std::string _servername;
-        int         _fd;
         bool        _write_ready;
         bool        _isPasswordValid;
         bool        _isRegistered;
+        pollfd      *pfd;
 
     public:
         std::string send_buffer;
         std::string recv_buffer;
-        Client(std::string hostname, int fd);
+        Client(std::string hostname, pollfd *pfd);
         Client();
         ~Client();
         void        setWrite(bool write);
@@ -28,7 +28,7 @@ class Client
         void        append_send_buffer(std::string message);
         void        append_recv_buffer(char *buffer);
         void        setNickname(std::string nickname);
-        std::string getNickname() const;
+        std::string &getNickname(void);
         bool        getIsRegistered() const;
         void        setUsername(std::string username);
         void        setHostname(std::string hostname);

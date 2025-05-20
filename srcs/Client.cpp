@@ -8,7 +8,7 @@ Client::~Client()
 {
 }
 
-Client::Client(std::string hostname, int fd) : _hostname(hostname), _fd(fd)
+Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), pfd(pfd)
 {
     _write_ready = false;
     _isPasswordValid = false;
@@ -17,7 +17,7 @@ Client::Client(std::string hostname, int fd) : _hostname(hostname), _fd(fd)
 
 int Client::getFd() const
 {
-    return _fd;
+    return pfd->fd;
 }
 
 void Client::setWrite(bool write)
@@ -40,7 +40,7 @@ void Client::setNickname(std::string nickname)
     _nickname = nickname;
 }
 
-std::string Client::getNickname() const
+std::string &Client::getNickname(void)
 {
     return _nickname;
 }

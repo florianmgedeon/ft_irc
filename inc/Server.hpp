@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <map>
+#include <vector>
 #include "Client.hpp"
 #include "Channel.hpp"
 #include "Command.hpp"
@@ -31,7 +32,7 @@ class Server
         nfds_t                          _nfds;
         int                             _serverSocketFd;
         bool                            _running;
-        std::map<int, Client>           _clients;
+        std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
         std::string                     _serverName;
 
@@ -39,8 +40,11 @@ class Server
         Server(int port, std::string password);
         ~Server();
         int         getPort() const;
-        std::string getPassword() const;
+        const std::string &getPassword() const;
         void        setRunning(bool running);
+        std::vector<Client>::iterator getClient(int fd);
+        std::vector<Client>::iterator getClient(const std::string nickname);
+        int			&getClientFd(Client &c, int fd);
         void        start();
         void        ft_socket();
         void        accept_client();

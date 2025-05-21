@@ -29,12 +29,14 @@ class Client
         void        append_recv_buffer(char *buffer);
         void        setNickname(std::string nickname);
         std::string &getNickname(void);
-        bool        getIsRegistered() const;
         void        setUsername(std::string username);
         void        setHostname(std::string hostname);
         void        setServername(std::string servername);
         void        setRealname(std::string realname);
+        void        setIsPasswordValid(bool isPasswordValid);
         void        setIsRegistered(bool isRegistered);
+        bool        getIsPasswordValid() const;
+        bool        getIsRegistered() const;
     };
 
 #endif

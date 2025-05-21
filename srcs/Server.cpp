@@ -120,10 +120,13 @@ void Server::find_command(Command command)
 
 //============================================ commands ====================================//
 
-void Server::numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg)
+void Server::numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg, int index)
 {
     std::string response = ":" + _serverName + " " + code + " " + target + " :" + msg;
-    ft_send(fd, response);//should be handle_send
+    ft_send(fd, response);
+    if (index == -1)
+        return;
+    handle_send(index);
 }
 
 //cap_command
@@ -182,7 +185,34 @@ void Server::cap_command(Command command)
 void Server::pass_command(Command command)
 {
     std::string password = command.getParams()[0];
-    // Client &client = *command.getClient();
+    Client &client = *command.getClient();
+    nfds_t i = 1;
+    while (i < _nfds)
+    {
+        if (_pollfds[i].fd == client.getFd())
+            break;
+        i++;
+        if (i == _nfds)
+            i = -1;
+    }
+    if (password.empty())
+    {
+        numeric_reply(client.getFd(), "461", "PASS", "Not enough parameters", i);
+        return;
+    }
+    if (client.getIsRegistered())
+    {
+        numeric_reply(client.getFd(), "462", "*", "You may not reregister", i);
+        return;
+    }
+    if (password != _password)
+    {
+        numeric_reply(client.getFd(), "464", "*", "Password incorrect", i);
+        quit_client(i);
+        return;
+    }
+    client.setIsPasswordValid(true);
+    std::cout << "Password is valid" << std::endl;
 }
 
 void Server::nick_command(Command command)
@@ -190,6 +220,15 @@ void Server::nick_command(Command command)
     std::string nickname = command.getParams()[0];
     Client &client = *command.getClient();
 
+    //just use to silence the warning
+    (void)client;
+    (void)nickname;
+    /*
+    if (!client.getIsPasswordValid())
+    {
+        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)");
+        return;
+    }
     if (nickname.empty())
     {
         numeric_reply(client.getFd(), "431", "*", "No nickname given");
@@ -213,7 +252,7 @@ void Server::nick_command(Command command)
             numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use");//collision must be implemented!!!
             return;
         }
-    client.setNickname(nickname);
+    client.setNickname(nickname);*/
 }
 
 void Server::user_command(Command command)
@@ -223,6 +262,20 @@ void Server::user_command(Command command)
     std::string servername = command.getParams()[2];
     std::string realname = command.getParams()[3];
     Client &client = *command.getClient();
+
+    //just use to silence the warning
+    (void)client;
+    (void)username;
+    (void)hostname;
+    (void)servername;
+    (void)realname;
+
+    /*
+    if (!client.getIsPasswordValid())
+    {
+        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)");
+        return;
+    }
 
     if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
     {
@@ -259,6 +312,7 @@ void Server::user_command(Command command)
 
     client.setWrite(true);
     client.send_buffer += ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname + "\r\n";
+    */
 }
 
 

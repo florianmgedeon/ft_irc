@@ -50,7 +50,7 @@ void Server::ft_send(int fd, std::string message)
     Client &client = *(getClient(fd));
     if (client.getFd() == -1)
         return;
-//    client.send_buffer.clear();//??????????????????????????
+    client.send_buffer.clear();
     client.send_buffer += message + "\r\n";
     client.setWrite(true);
     for (nfds_t i = 0; i < _nfds; ++i)
@@ -272,7 +272,7 @@ void Server::user_command(Command command)
 
 void Server::handle_send(int index)
 {
-    Client &client = _clients[_pollfds[index].fd];
+    Client &client = *(getClient(_pollfds[index].fd));
     if (!client.send_buffer.empty())
     {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);

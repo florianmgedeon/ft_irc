@@ -2,6 +2,7 @@
 #define IRCSERV_HPP
 
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 #include <cstring>
@@ -16,11 +17,12 @@
 #include <vector>
 #include "Client.hpp"
 #include "Channel.hpp"
-#include "Command.hpp"
+//#include "Command.hpp"
 #include <cerrno>
+enum cmds{NONE, CAP, PASS, NICK, USER};
 
 class Channel;
-class Command;
+//class Command;
 class Client;
 
 class Server
@@ -52,20 +54,27 @@ class Server
         bool        quit_client(int index);
         void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
-        void        create_command(int fd, char *buffer);
-        void        find_command(Command command);
+        bool        create_command(int fd, std::string buffer);
+//        void        find_command(Command command);
         void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg);
 
-        void        cap_command(Command command);
-        void        pass_command(Command command);
-        void        nick_command(Command command);
-        void        user_command(Command command);
+        bool		cap(std::string &line, Client &c);
+        bool		pass(std::string &line, Client &c);
+        bool		nick(std::string &line, Client &c);
+        bool		user(std::string &line, Client &c);
+//        void        cap_command(Command command);
+//        void        pass_command(Command command);
+//        void        nick_command(Command command);
+//        void        user_command(Command command);
         // void        ping_command(Command command);
         // void        pong_command(Command command);
         // void        kick_command(Command command);
         // void        invite_command(Command command);
         // void        topic_command(Command command);
         // void        mode_command(Command command);
+
+        const std::string& getServerName() const;
+        void setServerName(const std::string &serverName);
 };
 
 #endif

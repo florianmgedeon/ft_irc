@@ -2,6 +2,11 @@
 
 Client::Client()
 {
+	_nickname = _username = _realname = _hostname = _servername = "*";
+    _write_ready = false;
+    _isPasswordValid = false;
+    _isRegistered = false;
+    pfd = NULL;
 }
 
 Client::~Client()
@@ -10,6 +15,7 @@ Client::~Client()
 
 Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), pfd(pfd)
 {
+	_nickname = _username = _realname = _servername = "*";
     _write_ready = false;
     _isPasswordValid = false;
     _isRegistered = false;
@@ -27,7 +33,9 @@ void Client::setWrite(bool write)
 
 void Client::append_send_buffer(std::string message)
 {
+//	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
     send_buffer += message;
+    setWrite(true);
 }
 
 void Client::append_recv_buffer(char *buffer)
@@ -43,6 +51,10 @@ void Client::setNickname(std::string nickname)
 std::string &Client::getNickname(void)
 {
     return _nickname;
+}
+
+std::string Client::getColNick(void) {
+	return (":" + _nickname);
 }
 
 bool Client::getIsRegistered() const
@@ -74,4 +86,10 @@ void Client::setIsRegistered(bool isRegistered)
 {
     _isRegistered = isRegistered;
 }
+bool Client::isIsPasswordValid() const {
+	return _isPasswordValid;
+}
 
+void Client::setIsPasswordValid(bool isPasswordValid) {
+	_isPasswordValid = isPasswordValid;
+}

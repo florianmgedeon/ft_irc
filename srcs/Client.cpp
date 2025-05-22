@@ -57,6 +57,10 @@ std::string Client::getColNick(void) {
 	return (":" + _nickname);
 }
 
+std::string Client::getNickUserHost(void) {
+	return (_nickname + "!" + _username + "@" + _hostname);
+}
+
 bool Client::getIsRegistered() const
 {
     return _isRegistered;

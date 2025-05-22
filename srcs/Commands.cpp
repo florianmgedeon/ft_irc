@@ -3,15 +3,14 @@ typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator 
 //typedef std::map<std::string, bool(Server::*)(std::string&, Client&)> commandMap;
 
 commandIter	Server::checkCmd(std::string &line) {
-	if (line[0] == ':') // ignore source param for now
-		line = line.substr(line.find(" ") + 1);
+//	if (line[0] == ':') // ignore source param for now
+//		line = line.substr(line.find(" ") + 1);
 	std::string find =line.substr(0, line.find(" ") + 1) ;
 	return _commandMap.find(find);
 }
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 //	std::cout << "in buffer: |" << buffer << "|" << std::endl;
-
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
@@ -22,69 +21,11 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 //		std::cout << "line: |" << line << "|" << std::endl;
 		if (comMapIt != _commandMap.end())
 			res = (this->*(comMapIt->second))(line, *getClient(fd));
-		//CHANNELS:
-		//JOIN PART TOPIC NAMES LIST INVITE
 	}
 	return true;
 }
 
-bool	Server::privmsg(std::string &line, Client &c) {
-//	std::stringstream streamline;
-	std::string msg = line.substr(line.find(':') + 1);
-	line = line.substr(0, line.find(' '));
-	bool toChannel = false;
-
-	{//TODO: parse name parameter along commas for several recipients
-		while (strchr("@%#", line[0])) {
-	//		streamline << line;
-			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
-			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
-			else if (line[0] == '#') {
-				line = line.substr(1);
-				toChannel = true;
-			}
-		}
-		if (toChannel) {
-			if (_channels.find(line) != _channels.end())
-				_channels[line].sendChannelMessage(c.getNickname(), msg);
-		} else {
-			Client &recp = *getClient(line);
-			recp.append_send_buffer(c.getColNick() + " PRIVMSG " + msg);
-		}
-	}
-	return true;
-}
-
-bool	Server::join(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::part(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::topic(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::names(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::list(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::invite(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
+//---------------------------COMMANDS------------------------------------------
 
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
@@ -96,15 +37,68 @@ bool	Server::cap(std::string &line, Client &c) {
 	if (line.substr(0, 3).compare ("END")) return true; //server doesn't msg back on CAP END
 	return false;
 }
+//TODO: invite
+bool	Server::invite(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
 
-bool	Server::pass(std::string &line, Client &c) {
-	if (!line.size())
-		return (c.append_send_buffer(c.getColNick() + " 461 PASS :Not enough parameters"), false);
-	if (c.getIsRegistered())
-		return (c.append_send_buffer(c.getColNick() + " 462 :You may not reregister"), false);
-	if (line == this->getPassword())
-		return (c.setIsPasswordValid(true), true);
-	else return (c.append_send_buffer(c.getColNick() + " 464 :Password incorrect"), false);
+bool	Server::join(std::string &line, Client &c) {
+	std::string pwds, readName, readPwd;
+	std::stringstream pwdstream, chanNamestream;
+	Channel ch;
+	(void)c;
+	if (line.find(' ')) {
+		pwds = line.substr(line.find(' '));
+		line = line.substr(0, line.find(' '));
+	}
+	pwdstream << pwds;
+	chanNamestream << line;
+	while (std::getline(chanNamestream, readName, ',')) {
+		if (_channels.find(readName) == _channels.end()) {	//create channel
+			if (readName[0] == '&') {	//create pw-locked channel
+				std::getline(pwdstream, readPwd, ',');
+				_channels.insert(std::make_pair(readName, Channel(readPwd)));
+			} else if (readName[0] == '#') {	//create open chanel
+				_channels.insert(std::make_pair(readName, Channel()));
+			} else return (c.append_send_buffer(":" + readName + " 476 :Bad Channel Mask"), false);
+
+		} else {	//try joining existing channel
+			if (_channels[readName].isMemberBanned(&c)) {
+				return (c.append_send_buffer(c.getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
+			} else if (readName[0] == '&') {	//join pw-locked channel
+				std::getline(pwdstream, readPwd, ',');
+				if (!(_channels[readName].checkPassword(readPwd)))
+					return (c.append_send_buffer(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
+				else {
+//					_channels[readName]._members.push_back(&c); braucht an setter
+
+				}
+			}
+		}
+	}
+
+	return (true);
+}
+//TODO:kick
+bool	Server::kick(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+//TODO:list
+bool	Server::list(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+//TODO:mode
+bool	Server::mode(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::names(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
 }
 
 bool	Server::nick(std::string &line, Client &c) {
@@ -118,6 +112,69 @@ bool	Server::nick(std::string &line, Client &c) {
 		_clients[i].append_send_buffer(c.getColNick() + " NICK " + line);
 	c.setNickname(line);
 	return true;
+}
+
+bool	Server::part(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::pass(std::string &line, Client &c) {
+	if (!line.size())
+		return (c.append_send_buffer(c.getColNick() + " 461 PASS :Not enough parameters"), false);
+	if (c.getIsRegistered())
+		return (c.append_send_buffer(c.getColNick() + " 462 :You may not reregister"), false);
+	if (line == this->getPassword())
+		return (c.setIsPasswordValid(true), true);
+	else return (c.append_send_buffer(c.getColNick() + " 464 :Password incorrect"), false);
+}
+
+bool	Server::ping(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::pong(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::privmsg(std::string &line, Client &c) {
+	std::string msg = line.substr(line.find(':') + 1);
+	if (!msg.size())
+		return (c.append_send_buffer(c.getColNick() + " 412 :No text to send"), false);
+	line = line.substr(0, line.find(':'));
+	if (!line.size())
+		return (c.append_send_buffer(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
+	bool toChannel = false;
+
+	{//TODO: parse name parameter along commas for several recipients
+		while (strchr("@%#&", line[0])) {
+			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
+			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
+			else if (line[0] == '#' || line[0] == '&') {
+				line = line.substr(1);
+				toChannel = true;
+			}
+		}
+
+		if (toChannel) {
+			if (_channels.find(line) == _channels.end())
+				return (c.append_send_buffer(c.getColNick() + " 401 :No such channel") ,false);
+			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + msg);
+		} else {
+			std::vector<Client>::iterator recp = getClient(line);
+			if (recp == _clients.end())
+				return (c.append_send_buffer(c.getColNick() + " 401 :No such nick") ,false);
+			(*recp).append_send_buffer(c.getColNick() + " PRIVMSG " + msg);
+		}
+	}
+	return true;
+}
+
+bool	Server::topic(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
 }
 
 bool	Server::user(std::string &line, Client &c) {
@@ -144,22 +201,3 @@ bool	Server::user(std::string &line, Client &c) {
 	return true;
 }
 
-bool	Server::ping(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::pong(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::kick(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
-
-bool	Server::mode(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}

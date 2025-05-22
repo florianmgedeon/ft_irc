@@ -1,5 +1,4 @@
-#ifndef IRCSERV_HPP
-#define IRCSERV_HPP
+#pragma once
 
 #include <iostream>
 #include <sstream>
@@ -46,6 +45,8 @@ class Server
         int         getPort() const;
         const std::string &getPassword() const;
         void        setRunning(bool running);
+        const std::string& getServerName() const;
+        void setServerName(const std::string &serverName);
         std::vector<Client>::iterator getClient(int fd);
         std::vector<Client>::iterator getClient(const std::string nickname);
         int&		getClientFd(Client &c, int fd);
@@ -58,27 +59,23 @@ class Server
         void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
 
+//Parsing and commands
         commandIter checkCmd(std::string &line);
         bool        parseClientInput(int fd, std::string buffer);
-        bool		privmsg(std::string &line, Client &c);
-        bool		join(std::string &line, Client &c);
-        bool		part(std::string &line, Client &c);
-        bool		topic(std::string &line, Client &c);
-        bool		names(std::string &line, Client &c);
-        bool		list(std::string &line, Client &c);
-        bool		invite(std::string &line, Client &c);
+
         bool		cap(std::string &line, Client &c);
-        bool		pass(std::string &line, Client &c);
+        bool		invite(std::string &line, Client &c);
+        bool		join(std::string &line, Client &c);
+        bool		kick(std::string &line, Client &c);
+        bool		list(std::string &line, Client &c);
+        bool		mode(std::string &line, Client &c);
+        bool		names(std::string &line, Client &c);
         bool		nick(std::string &line, Client &c);
-        bool		user(std::string &line, Client &c);
+        bool		part(std::string &line, Client &c);
+        bool		pass(std::string &line, Client &c);
         bool		ping(std::string &line, Client &c);
         bool		pong(std::string &line, Client &c);
-        bool		kick(std::string &line, Client &c);
-        bool		mode(std::string &line, Client &c);
-
-
-        const std::string& getServerName() const;
-        void setServerName(const std::string &serverName);
+        bool		privmsg(std::string &line, Client &c);
+        bool		topic(std::string &line, Client &c);
+        bool		user(std::string &line, Client &c);
 };
-
-#endif

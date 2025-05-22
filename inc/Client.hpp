@@ -1,5 +1,4 @@
-#ifndef CLIENT_HPP
-#define CLIENT_HPP
+#pragma once
 
 #include "Server.hpp"
 
@@ -30,6 +29,7 @@ class Client
         void        setNickname(std::string nickname);
         std::string &getNickname(void);
         std::string getColNick(void);
+        std::string getNickUserHost(void);
         bool        getIsRegistered() const;
         void        setUsername(std::string username);
         void        setHostname(std::string hostname);
@@ -40,5 +40,3 @@ class Client
         bool		isIsPasswordValid() const;
         void		setIsPasswordValid(bool isPasswordValid);
 };
-
-#endif

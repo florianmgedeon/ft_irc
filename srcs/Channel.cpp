@@ -1,11 +1,13 @@
 #include "../inc/Channel.hpp"
 
-Channel::Channel()
-{
+Channel::Channel(){
+	_hasPassword = false;
 }
 
-Channel::~Channel()
-{
+Channel::~Channel(){}
+
+Channel::Channel(std::string pwd): _password(pwd) {
+	_hasPassword = true;
 }
 
 bool Channel::isMember(Client *client)
@@ -71,4 +73,16 @@ void Channel::sendChannelMessage(std::string sender, std::string message) {
 			return;
 	for (std::list<Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
 		(*it)->append_send_buffer(message);
+}
+
+bool	Channel::isMemberBanned(Client *client) {
+    for (std::list<Client *>::iterator it = _banlist.begin(); it != _banlist.end(); ++it)
+        if (*it == client)
+            return true;
+    return false;
+}
+
+bool	Channel::checkPassword(std::string in) {
+	if (in == _password) return true;
+	return false;
 }

@@ -5,21 +5,21 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     _serverName = "ircserv";
     _serverSocketFd = -1;
     _nfds = 0;
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("CAP " , &Server::cap));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("INVITE ", &Server::invite));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("JOIN ", &Server::join));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("KICK ", &Server::kick));
-	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("LIST ", &Server::list));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("MODE ", &Server::mode));
-	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("NAMES ", &Server::names));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("NICK ", &Server::nick));
-	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PART ", &Server::part));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PASS ", &Server::pass));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PING ", &Server::ping));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PONG ", &Server::pong));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PRIVMSG ", &Server::privmsg));
-	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("TOPIC ", &Server::topic));
-    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("USER ", &Server::user));
+    _commandMap.insert(std::make_pair("CAP " ,		&Server::cap));
+    _commandMap.insert(std::make_pair("INVITE ",	&Server::invite));
+    _commandMap.insert(std::make_pair("JOIN ",		&Server::join));
+    _commandMap.insert(std::make_pair("KICK ",		&Server::kick));
+	_commandMap.insert(std::make_pair("LIST ",		&Server::list));
+    _commandMap.insert(std::make_pair("MODE ",		&Server::mode));
+	_commandMap.insert(std::make_pair("NAMES ",		&Server::names));
+    _commandMap.insert(std::make_pair("NICK ",		&Server::nick));
+	_commandMap.insert(std::make_pair("PART ",		&Server::part));
+    _commandMap.insert(std::make_pair("PASS ",		&Server::pass));
+    _commandMap.insert(std::make_pair("PING ",		&Server::ping));
+    _commandMap.insert(std::make_pair("PONG ",		&Server::pong));
+    _commandMap.insert(std::make_pair("PRIVMSG ",	&Server::privmsg));
+	_commandMap.insert(std::make_pair("TOPIC ",		&Server::topic));
+    _commandMap.insert(std::make_pair("USER ",		&Server::user));
 }
 
 Server::~Server()

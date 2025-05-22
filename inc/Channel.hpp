@@ -1,5 +1,4 @@
-#ifndef CHANNEL_HPP
-#define CHANNEL_HPP
+#pragma once
 
 #include "Server.hpp"
 #include "Client.hpp"
@@ -16,7 +15,7 @@ class Channel
         //int                 _userLimit;              
         //bool                _inviteOnly;
         //bool                _topicRestricted;
-        //bool                _hasPassword;
+        bool                _hasPassword;
         std::list<Client *> _members; // could be a map<nickname, Client *> to be easier to search?
         std::list<Client *> _operators;
         std::list<Client *> _banlist;
@@ -24,6 +23,7 @@ class Channel
     public:
         Channel();
         ~Channel();
+        Channel(std::string pwd);
         bool isMember(Client *client);
         bool isOperator(Client *client);
         void removeMember(Client *client);
@@ -31,6 +31,6 @@ class Channel
         void addOperator(Client *client);
         void removeOperator(Client *client);
         void sendChannelMessage(std::string sender, std::string message);
+        bool isMemberBanned(Client *client);
+        bool checkPassword(std::string in);
 };
-
-#endif

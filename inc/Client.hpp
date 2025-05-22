@@ -13,6 +13,7 @@ class Client
         std::string _hostname;
         std::string _servername;
         bool        _write_ready;
+        bool        _capNegotiation;
         bool        _isPasswordValid;
         bool        _isRegistered;
         pollfd      *pfd;
@@ -37,6 +38,7 @@ class Client
         void        setIsRegistered(bool isRegistered);
         bool        getIsPasswordValid() const;
         bool        getIsRegistered() const;
+        void        setCapNegotiation(bool capNegotiation);
     };
 
 #endif

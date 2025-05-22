@@ -11,6 +11,7 @@ Client::~Client()
 Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), pfd(pfd)
 {
     _write_ready = false;
+    _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
 }
@@ -83,4 +84,9 @@ bool Client::getIsPasswordValid() const
 bool Client::getIsRegistered() const
 {
     return _isRegistered;
+}
+
+void Client::setCapNegotiation(bool capNegotiation)
+{
+    _capNegotiation = capNegotiation;
 }

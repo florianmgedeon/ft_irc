@@ -168,16 +168,7 @@ void Server::cap_command(Command command)
     if (command.getParams()[0] == "END")
     {
         Client &client = *command.getClient();
-        std::string cap_response = ":" + _serverName + " CAP * END\r\n";
-        ft_send(client.getFd(), cap_response);
-        nfds_t i = 1;
-        while (i < _nfds)
-        {
-            if (_pollfds[i].fd == client.getFd())
-                break;
-            i++;
-        }
-        handle_send(i);
+        client.setCapNegotiation(true);
         return;
     }
 }

@@ -1,11 +1,25 @@
 #include "../inc/Server.hpp"
 
-Server::Server(int port, std::string password) : _port(port), _password(password)
-{   
+Server::Server(int port, std::string password) : _port(port), _password(password) {
     _running = true;
     _serverName = "ircserv";
     _serverSocketFd = -1;
     _nfds = 0;
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("CAP " , &Server::cap));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("INVITE ", &Server::invite));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("JOIN ", &Server::join));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("KICK ", &Server::kick));
+	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("LIST ", &Server::list));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("MODE ", &Server::mode));
+	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("NAMES ", &Server::names));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("NICK ", &Server::nick));
+	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PART ", &Server::part));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PASS ", &Server::pass));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PING ", &Server::ping));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PONG ", &Server::pong));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("PRIVMSG ", &Server::privmsg));
+	_commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("TOPIC ", &Server::topic));
+    _commandMap.insert(std::make_pair<std::string, bool (Server::*)(std::string&, Client&)>("USER ", &Server::user));
 }
 
 Server::~Server()
@@ -72,206 +86,6 @@ void Server::ft_send(int fd, std::string message)
         }
     }
 }
-//
-//void Server::create_command(int fd, char *buffer)
-//{
-//    Client &client = *(getClient(fd));
-//	client.append_recv_buffer(buffer);
-//
-//	size_t end_pos = client.recv_buffer.find("\r\n");
-//	while (end_pos != std::string::npos && end_pos < 512)
-//	{
-//		std::string complete_cmd = client.recv_buffer.substr(0, end_pos);
-//		client.recv_buffer.erase(0, end_pos + 2);
-//		Command command(complete_cmd, &client);
-//		find_command(command);
-//		if (getClient(fd) == _clients.end())
-//			break;
-//		end_pos = client.recv_buffer.find("\r\n");
-//	}
-//}
-//
-//void Server::find_command(Command command)
-//{
-//    std::string cmd = command.getCommand();
-//    if (cmd == "CAP")
-//    {
-//        cap_command(command);
-//    }
-//    else if (cmd == "PASS")
-//    {
-//        pass_command(command);
-//    }
-//    else if (cmd == "NICK")
-//    {
-//        nick_command(command);
-//    }
-//    else if (cmd == "USER")
-//    {
-//        user_command(command);
-//    }
-//    // else if(cmd == "PING")
-//    //     ping_command(command);
-//    // else if(cmd == "PONG")
-//    //     pong_command(command);
-//	// else if (cmd == "KICK")
-//	// 	kick_command(command);
-//	// else if (cmd == "INVITE")
-//	// 	invite_command(command);
-//	// else if (cmd == "TOPIC")
-//	// 	topic_command(command);
-//	// else if (cmd == "MODE")
-//	// 	mode_command(command);
-//    // else {}
-//        // Handle unknown command
-//}
-
-//============================================ commands ====================================//
-
-void Server::numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg)
-{
-    std::string response = ":" + _serverName + " " + code + " " + target + " :" + msg;
-    ft_send(fd, response);//should be handle_send
-}
-
-//cap_command
-//void Server::cap_command(Command command)
-//{
-//    if (command.getParams()[0] == "LS")
-//    {
-//        Client &client = *command.getClient();
-//
-//        std::string cap_response = ":" + _serverName + " CAP * LS :multi-prefix\r\n";
-//        ft_send(client.getFd(), cap_response);
-//        nfds_t i = 1;
-//        while (i < _nfds)
-//        {
-//            if (_pollfds[i].fd == client.getFd())
-//                break;
-//            i++;
-//        }
-//        handle_send(i);
-//        return;
-//    }
-//
-//    if (command.getParams()[0] == "REQ")
-//    {
-//        Client &client = *command.getClient();
-//        std::string cap_response = ":" + _serverName + " CAP * ACK :multi-prefix\r\n";
-//        ft_send(client.getFd(), cap_response);
-//        nfds_t i = 1;
-//        while (i < _nfds)
-//        {
-//            if (_pollfds[i].fd == client.getFd())
-//                break;
-//            i++;
-//        }
-//        handle_send(i);
-//        return;
-//    }
-//
-//    if (command.getParams()[0] == "END")
-//    {
-//        Client &client = *command.getClient();
-//        std::string cap_response = ":" + _serverName + " CAP * END\r\n";
-//        ft_send(client.getFd(), cap_response);
-//        nfds_t i = 1;
-//        while (i < _nfds)
-//        {
-//            if (_pollfds[i].fd == client.getFd())
-//                break;
-//            i++;
-//        }
-//        handle_send(i);
-//        return;
-//    }
-//}
-//
-//void Server::pass_command(Command command)
-//{
-//    std::string password = command.getParams()[0];
-//    // Client &client = *command.getClient();
-//}
-//
-//void Server::nick_command(Command command)
-//{
-//    std::string nickname = command.getParams()[0];
-//    Client &client = *command.getClient();
-//
-//    if (nickname.empty())
-//    {
-//        numeric_reply(client.getFd(), "431", "*", "No nickname given");
-//        return;
-//    }
-//
-//    if (nickname.length() > 9 || nickname.find_first_of(" \r\n") != std::string::npos || nickname[0] == '#')
-//    {
-//        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
-//        return;
-//    }
-//
-//    if (nickname.find_first_not_of("0123456789") == std::string::npos)
-//    {
-//        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
-//        return;
-//    }
-//    std::vector<Client>::iterator check = getClient(nickname);
-//    if (check == _clients.end())
-//        {
-//            numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use");//collision must be implemented!!!
-//            return;
-//        }
-//    client.setNickname(nickname);
-//}
-
-//void Server::user_command(Command command)
-//{
-//    std::string username = command.getParams()[0];
-//    std::string hostname = command.getParams()[1];
-//    std::string servername = command.getParams()[2];
-//    std::string realname = command.getParams()[3];
-//    Client &client = *command.getClient();
-//
-//    if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
-//    {
-//        numeric_reply(client.getFd(), "461", "USER", "Not enough parameters");
-//        return;
-//    }
-//
-//    if (username.length() > 9 || username.find_first_of(" \r\n") != std::string::npos || username[0] == '#')
-//    {
-//        numeric_reply(client.getFd(), "461", "USER", "Erroneous username");
-//        return;
-//    }
-//    if (hostname.length() > 9 || hostname.find_first_of(" \r\n") != std::string::npos || hostname[0] == '#')
-//    {
-//        numeric_reply(client.getFd(), "461", "USER", "Erroneous hostname");
-//        return;
-//    }
-//    if (servername.length() > 9 || servername.find_first_of(" \r\n") != std::string::npos || servername[0] == '#')
-//    {
-//        numeric_reply(client.getFd(), "461", "USER", "Erroneous servername");
-//        return;
-//    }
-//    if (realname.length() > 9 || realname.find_first_of(" \r\n") != std::string::npos || realname[0] == '#')
-//    {
-//        numeric_reply(client.getFd(), "461", "USER", "Erroneous realname");
-//        return;
-//    }
-//
-//    client.setUsername(username);
-//    client.setHostname(hostname);
-//    client.setServername(servername);
-//    client.setRealname(realname);
-//    client.setIsRegistered(true);
-//
-//    client.setWrite(true);
-//    client.send_buffer += ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname + "\r\n";
-//}
-
-
-
-
 
 
 //============================================ poll loop ====================================//
@@ -367,8 +181,8 @@ bool Server::recv_client(int index)
     }
     else
     {
-        std::cout << "buffer from recv: " << buffer << std::endl;
-        create_command(client_fd, std::string(buffer));
+//        std::cout << "buffer from recv: " << buffer << std::endl;
+        parseClientInput(client_fd, std::string(buffer));
         return false;
     }
 }

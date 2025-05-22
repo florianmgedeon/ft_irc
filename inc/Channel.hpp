@@ -17,8 +17,9 @@ class Channel
         //bool                _inviteOnly;
         //bool                _topicRestricted;
         //bool                _hasPassword;
-        std::list<Client *> _members;
+        std::list<Client *> _members; // could be a map<nickname, Client *> to be easier to search?
         std::list<Client *> _operators;
+        std::list<Client *> _banlist;
 
     public:
         Channel();
@@ -29,6 +30,7 @@ class Channel
         bool isEmpty();
         void addOperator(Client *client);
         void removeOperator(Client *client);
+        void sendChannelMessage(std::string sender, std::string message);
 };
 
 #endif

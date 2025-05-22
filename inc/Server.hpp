@@ -17,17 +17,18 @@
 #include <vector>
 #include "Client.hpp"
 #include "Channel.hpp"
-//#include "Command.hpp"
 #include <cerrno>
-enum cmds{NONE, CAP, PASS, NICK, USER};
 
 class Channel;
-//class Command;
 class Client;
 
 class Server
 {
     private:
+        //boilerplate for server function
+        typedef bool(Server::*cmd)(std::string&, Client&);
+        typedef std::map<std::string, cmd> commandMap;
+        typedef commandMap::iterator    commandIter;
         int                             _port;
         std::string                     _password;
         pollfd                          _pollfds[SOMAXCONN];
@@ -37,6 +38,7 @@ class Server
         std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
         std::string                     _serverName;
+        commandMap                      _commandMap;
 
     public:
         Server(int port, std::string password);
@@ -46,32 +48,34 @@ class Server
         void        setRunning(bool running);
         std::vector<Client>::iterator getClient(int fd);
         std::vector<Client>::iterator getClient(const std::string nickname);
-        int			&getClientFd(Client &c, int fd);
+        int&		getClientFd(Client &c, int fd);
         void        start();
         void        ft_socket();
+
         void        accept_client();
         bool        recv_client(int index);
         bool        quit_client(int index);
         void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
-        bool        create_command(int fd, std::string buffer);
-//        void        find_command(Command command);
-        void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg);
 
+        commandIter checkCmd(std::string &line);
+        bool        parseClientInput(int fd, std::string buffer);
+        bool		privmsg(std::string &line, Client &c);
+        bool		join(std::string &line, Client &c);
+        bool		part(std::string &line, Client &c);
+        bool		topic(std::string &line, Client &c);
+        bool		names(std::string &line, Client &c);
+        bool		list(std::string &line, Client &c);
+        bool		invite(std::string &line, Client &c);
         bool		cap(std::string &line, Client &c);
         bool		pass(std::string &line, Client &c);
         bool		nick(std::string &line, Client &c);
         bool		user(std::string &line, Client &c);
-//        void        cap_command(Command command);
-//        void        pass_command(Command command);
-//        void        nick_command(Command command);
-//        void        user_command(Command command);
-        // void        ping_command(Command command);
-        // void        pong_command(Command command);
-        // void        kick_command(Command command);
-        // void        invite_command(Command command);
-        // void        topic_command(Command command);
-        // void        mode_command(Command command);
+        bool		ping(std::string &line, Client &c);
+        bool		pong(std::string &line, Client &c);
+        bool		kick(std::string &line, Client &c);
+        bool		mode(std::string &line, Client &c);
+
 
         const std::string& getServerName() const;
         void setServerName(const std::string &serverName);

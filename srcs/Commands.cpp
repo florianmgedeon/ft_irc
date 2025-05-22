@@ -1,21 +1,93 @@
 #include "../inc/Server.hpp"
+typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator commandIter;
+//typedef std::map<std::string, bool(Server::*)(std::string&, Client&)> commandMap;
 
-static cmds checkCmd(std::string &line) {
+commandIter	Server::checkCmd(std::string &line) {
 	if (line[0] == ':') // ignore source param for now
 		line = line.substr(line.find(" ") + 1);
-	if (!line.substr(0, 4).compare("CAP "))
-		return (line = line.substr(4), CAP);
-	else if (!line.substr(0, 5).compare("PASS "))
-		return (line = line.substr(5), PASS);
-	else if (!line.substr(0, 5).compare("NICK "))
-		return (line = line.substr(5), NICK);
-	else if (!line.substr(0, 5).compare("USER "))
-		return (line = line.substr(5), USER);
-	return NONE;
+	std::string find =line.substr(0, line.find(" ") + 1) ;
+	return _commandMap.find(find);
 }
 
+bool	Server::parseClientInput(int fd, std::string buffer) {
+//	std::cout << "in buffer: |" << buffer << "|" << std::endl;
+
+	std::string line, dummy;
+	std::stringstream streamline;
+	streamline << buffer;
+	bool res = true;
+	while (res && std::getline(streamline, line, '\r')) {
+		std::getline(streamline, dummy, '\n');
+		commandIter comMapIt = checkCmd(line);
+//		std::cout << "line: |" << line << "|" << std::endl;
+		if (comMapIt != _commandMap.end())
+			res = (this->*(comMapIt->second))(line, *getClient(fd));
+		//CHANNELS:
+		//JOIN PART TOPIC NAMES LIST INVITE
+	}
+	return true;
+}
+
+bool	Server::privmsg(std::string &line, Client &c) {
+//	std::stringstream streamline;
+	std::string msg = line.substr(line.find(':') + 1);
+	line = line.substr(0, line.find(' '));
+	bool toChannel = false;
+
+	{//TODO: parse name parameter along commas for several recipients
+		while (strchr("@%#", line[0])) {
+	//		streamline << line;
+			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
+			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
+			else if (line[0] == '#') {
+				line = line.substr(1);
+				toChannel = true;
+			}
+		}
+		if (toChannel) {
+			if (_channels.find(line) != _channels.end())
+				_channels[line].sendChannelMessage(c.getNickname(), msg);
+		} else {
+			Client &recp = *getClient(line);
+			recp.append_send_buffer(c.getColNick() + " PRIVMSG " + msg);
+		}
+	}
+	return true;
+}
+
+bool	Server::join(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::part(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::topic(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::names(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::list(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::invite(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+
 bool	Server::cap(std::string &line, Client &c) {
-//	std::cout << "line: <" << line << ">" << std::endl;
+//	std::cout << "CAP line: <" << line << ">" << std::endl;
 	if (line.substr(0, 2).compare ("LS"))
 		return (c.append_send_buffer(_serverName + ": CAP * LS"), true);
 //	if (line.substr(0, 4).compare ("LIST"))
@@ -72,28 +144,22 @@ bool	Server::user(std::string &line, Client &c) {
 	return true;
 }
 
-bool	Server::create_command(int fd, std::string buffer) {
-//	std::cout << "in buffer: |" << buffer << "|" << std::endl;
-	std::string line, dummy;
-	std::stringstream streamline;
-	streamline << buffer;
-	while (std::getline(streamline, line, '\r')) {
-		std::getline(streamline, dummy, '\n');
-		cmds cmd = checkCmd(line);
-//		std::cout << "line: |" << line << "|" << std::endl;
-		switch (cmd) {
-		//AUTH:
-		case CAP : cap (line, *getClient(fd)); break;
-		case PASS: pass(line, *getClient(fd)); break;
-		case NICK: nick(line, *getClient(fd)); break;
-		case USER: user(line, *getClient(fd)); break;
-		case NONE: break;
-		}
+bool	Server::ping(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
 
-		//CHANNELS:
-		//JOIN PART TOPIC NAMES LIST INVITE
-		//MESSAGES:
-		//PRIVMSG
-	}
-	return true;
+bool	Server::pong(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::kick(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
+}
+
+bool	Server::mode(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
 }

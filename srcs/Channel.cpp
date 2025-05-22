@@ -64,3 +64,11 @@ void Channel::removeOperator(Client *client)
         }
     }
 }
+
+void Channel::sendChannelMessage(std::string sender, std::string message) {
+	for (std::list<Client *>::iterator it = _banlist.begin(); it != _banlist.end(); it++)
+		if ((*it)->getNickname() == sender)
+			return;
+	for (std::list<Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
+		(*it)->append_send_buffer(message);
+}

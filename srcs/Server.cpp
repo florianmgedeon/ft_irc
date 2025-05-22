@@ -212,47 +212,65 @@ void Server::pass_command(Command command)
         return;
     }
     client.setIsPasswordValid(true);
-    std::cout << "Password is valid" << std::endl;
+    std::cout << "Password is valid: " << password << std::endl;
 }
 
 void Server::nick_command(Command command)
 {
     std::string nickname = command.getParams()[0];
     Client &client = *command.getClient();
-
-    //just use to silence the warning
-    (void)client;
-    (void)nickname;
-    /*
+    nfds_t i = 1;
+    while (i < _nfds)
+    {
+        if (_pollfds[i].fd == client.getFd())
+            break;
+        i++;
+        if (i == _nfds)
+            i = -1;
+    }
     if (!client.getIsPasswordValid())
     {
-        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)");
+        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)", i);
         return;
     }
     if (nickname.empty())
     {
-        numeric_reply(client.getFd(), "431", "*", "No nickname given");
+        numeric_reply(client.getFd(), "431", "*", "No nickname given", i);
         return;
     }
-
-    if (nickname.length() > 9 || nickname.find_first_of(" \r\n") != std::string::npos || nickname[0] == '#')
+    const std::string specials = "[]\\`_^{|}";
+    char first = nickname[0];
+    if (nickname.length() > 30 || (!isalpha(first) && specials.find(first) == std::string::npos) || nickname.find_first_of(" \r\n") != std::string::npos)
     {
-        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
+        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname", i);
         return;
     }
-
-    if (nickname.find_first_not_of("0123456789") == std::string::npos)
+    for (size_t j = 1; j < nickname.length(); ++j)
     {
-        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname");
-        return;
-    }
-    std::vector<Client>::iterator check = getClient(nickname);
-    if (check == _clients.end())
+        char c = nickname[j];
+        if (!isalnum(c) && specials.find(c) == std::string::npos)
         {
-            numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use");//collision must be implemented!!!
+            numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname", i);
             return;
         }
-    client.setNickname(nickname);*/
+    }
+    if (nickname.find_first_of("0123456789") != std::string::npos && nickname.find_first_not_of("0123456789") == std::string::npos)
+    {
+        numeric_reply(client.getFd(), "432", nickname, "Erroneous nickname", i);
+        return;
+    }
+    if (getClient(nickname) != _clients.end())
+    {
+        numeric_reply(client.getFd(), "433", nickname, "Nickname is already in use", i);
+        return;
+    }
+    if (nickname == client.getNickname())
+    {
+        numeric_reply(client.getFd(), "462", "*", "You may not reregister", i);
+        return;
+    }
+    client.setNickname(nickname);
+    std::cout << "Nickname set to: " << nickname << std::endl;
 }
 
 void Server::user_command(Command command)

@@ -39,6 +39,7 @@ class Client
         bool        getIsPasswordValid() const;
         bool        getIsRegistered() const;
         void        setCapNegotiation(bool capNegotiation);
+        bool        getCapNegotiation() const;
     };
 
 #endif

@@ -90,3 +90,8 @@ void Client::setCapNegotiation(bool capNegotiation)
 {
     _capNegotiation = capNegotiation;
 }
+
+bool Client::getCapNegotiation() const
+{
+    return _capNegotiation;
+}

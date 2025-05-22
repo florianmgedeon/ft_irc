@@ -129,7 +129,6 @@ void Server::numeric_reply(int fd, const std::string& code, const std::string& t
     handle_send(index);
 }
 
-//cap_command
 void Server::cap_command(Command command)
 {
     if (command.getParams()[0] == "LS")
@@ -177,6 +176,11 @@ void Server::pass_command(Command command)
 {
     std::string password = command.getParams()[0];
     Client &client = *command.getClient();
+    if (client.getCapNegotiation() == false)
+    {
+        numeric_reply(client.getFd(), "482", "*", "CAP END not received", -1);
+        return;
+    }
     nfds_t i = 1;
     while (i < _nfds)
     {
@@ -206,7 +210,7 @@ void Server::pass_command(Command command)
     std::cout << "Password is valid: " << password << std::endl;
 }
 
-void Server::nick_command(Command command)
+void Server::nick_command(Command command)//not just return -> set not set flag (check later in USER) and then do standard precidure for that case
 {
     std::string nickname = command.getParams()[0];
     Client &client = *command.getClient();
@@ -264,7 +268,7 @@ void Server::nick_command(Command command)
     std::cout << "Nickname set to: " << nickname << std::endl;
 }
 
-void Server::user_command(Command command)
+void Server::user_command(Command command)//check what is erroneous!!
 {
     std::string username = command.getParams()[0];
     std::string hostname = command.getParams()[1];
@@ -272,44 +276,28 @@ void Server::user_command(Command command)
     std::string realname = command.getParams()[3];
     Client &client = *command.getClient();
 
-    //just use to silence the warning
-    (void)client;
-    (void)username;
-    (void)hostname;
-    (void)servername;
-    (void)realname;
-
-    /*
-    if (!client.getIsPasswordValid())
+    nfds_t i = 1;
+    while (i < _nfds)
     {
-        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)");
+        if (_pollfds[i].fd == client.getFd())
+            break;
+        i++;
+        if (i == _nfds)
+            i = -1;
+    }
+
+    if (!client.getIsPasswordValid())//and NICK worked?
+    {
+        numeric_reply(client.getFd(), "462", "*", "Unauthorized command", i);
         return;
     }
+
+    if (client.getIsRegistered())
+        numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)", i);
 
     if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
     {
-        numeric_reply(client.getFd(), "461", "USER", "Not enough parameters");
-        return;
-    }
-
-    if (username.length() > 9 || username.find_first_of(" \r\n") != std::string::npos || username[0] == '#')
-    {
-        numeric_reply(client.getFd(), "461", "USER", "Erroneous username");
-        return;
-    }
-    if (hostname.length() > 9 || hostname.find_first_of(" \r\n") != std::string::npos || hostname[0] == '#')
-    {
-        numeric_reply(client.getFd(), "461", "USER", "Erroneous hostname");
-        return;
-    }
-    if (servername.length() > 9 || servername.find_first_of(" \r\n") != std::string::npos || servername[0] == '#')
-    {
-        numeric_reply(client.getFd(), "461", "USER", "Erroneous servername");
-        return;
-    }
-    if (realname.length() > 9 || realname.find_first_of(" \r\n") != std::string::npos || realname[0] == '#')
-    {
-        numeric_reply(client.getFd(), "461", "USER", "Erroneous realname");
+        numeric_reply(client.getFd(), "461", "USER", "Not enough parameters", i);
         return;
     }
 
@@ -319,9 +307,11 @@ void Server::user_command(Command command)
     client.setRealname(realname);
     client.setIsRegistered(true);
 
-    client.setWrite(true);
-    client.send_buffer += ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname + "\r\n";
-    */
+    client.send_buffer.clear();
+    std::string msg = ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname;
+    ft_send(client.getFd(), msg);
+    handle_send(i);
+    std::cout << "User registered: " << username << std::endl;
 }
 
 

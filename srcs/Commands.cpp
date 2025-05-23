@@ -30,11 +30,12 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
 	if (line.substr(0, 2).compare ("LS"))
-		return (c.append_send_buffer(_serverName + ": CAP * LS"), true);
+		return (c.sendToClient(_serverName + ": CAP * LS"), true);
 //	if (line.substr(0, 4).compare ("LIST"))
 	if (line.substr(0, 4).compare ("REQ "))	//TODO: parse and actually do request
-		return (c.append_send_buffer(_serverName + ": CAP * ACK " + *(line.begin() + 5)), true);
-	if (line.substr(0, 3).compare ("END")) return true; //server doesn't msg back on CAP END
+		return (c.sendToClient(_serverName + ": CAP * ACK " + *(line.begin() + 5)), true);
+	if (line.substr(0, 3).compare ("END"))
+			return (c.setCapNegotiation(true), true);
 	return false;
 }
 //TODO: invite
@@ -61,15 +62,15 @@ bool	Server::join(std::string &line, Client &c) {
 				_channels.insert(std::make_pair(readName, Channel(readPwd)));
 			} else if (readName[0] == '#') {	//create open chanel
 				_channels.insert(std::make_pair(readName, Channel()));
-			} else return (c.append_send_buffer(":" + readName + " 476 :Bad Channel Mask"), false);
+			} else return (c.sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
 
 		} else {	//try joining existing channel
 			if (_channels[readName].isMemberBanned(&c)) {
-				return (c.append_send_buffer(c.getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
+				return (c.sendToClient(c.getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
 			} else if (readName[0] == '&') {	//join pw-locked channel
 				std::getline(pwdstream, readPwd, ',');
 				if (!(_channels[readName].checkPassword(readPwd)))
-					return (c.append_send_buffer(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
+					return (c.sendToClient(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
 				else {
 //					_channels[readName]._members.push_back(&c); braucht an setter
 
@@ -103,13 +104,13 @@ bool	Server::names(std::string &line, Client &c) {
 
 bool	Server::nick(std::string &line, Client &c) {
 	if (!line.size())
-		return (c.append_send_buffer(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
+		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
 	if (strchr("&#:", line[0]) || line.find_first_of(" \r\n") != std::string::npos || line.size() > 9)
-		return (c.append_send_buffer(c.getColNick() + " 432 " + line + " :Erroneus nickname"), false);
+		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneus nickname"), false);
 	if (getClient(line) != _clients.end())
-		return (c.append_send_buffer(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
+		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
 	for (size_t i = 0; i < _clients.size(); i++)
-		_clients[i].append_send_buffer(c.getColNick() + " NICK " + line);
+		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
 	c.setNickname(line);
 	return true;
 }
@@ -121,12 +122,14 @@ bool	Server::part(std::string &line, Client &c) {
 
 bool	Server::pass(std::string &line, Client &c) {
 	if (!line.size())
-		return (c.append_send_buffer(c.getColNick() + " 461 PASS :Not enough parameters"), false);
+		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c.getIsRegistered())
-		return (c.append_send_buffer(c.getColNick() + " 462 :You may not reregister"), false);
+		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
 	if (line == this->getPassword())
+		{std::cout << "Password is valid: " << line << std::endl;
 		return (c.setIsPasswordValid(true), true);
-	else return (c.append_send_buffer(c.getColNick() + " 464 :Password incorrect"), false);
+	}
+	else return (c.sendToClient(c.getColNick() + " 464 :Password incorrect"), false);
 }
 
 bool	Server::ping(std::string &line, Client &c) {
@@ -142,10 +145,10 @@ bool	Server::pong(std::string &line, Client &c) {
 bool	Server::privmsg(std::string &line, Client &c) {
 	std::string msg = line.substr(line.find(':') + 1);
 	if (!msg.size())
-		return (c.append_send_buffer(c.getColNick() + " 412 :No text to send"), false);
+		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
 	line = line.substr(0, line.find(':'));
 	if (!line.size())
-		return (c.append_send_buffer(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
+		return (c.sendToClient(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
 	bool toChannel = false;
 
 	{//TODO: parse name parameter along commas for several recipients
@@ -160,13 +163,13 @@ bool	Server::privmsg(std::string &line, Client &c) {
 
 		if (toChannel) {
 			if (_channels.find(line) == _channels.end())
-				return (c.append_send_buffer(c.getColNick() + " 401 :No such channel") ,false);
+				return (c.sendToClient(c.getColNick() + " 401 :No such channel") ,false);
 			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + msg);
 		} else {
 			std::vector<Client>::iterator recp = getClient(line);
 			if (recp == _clients.end())
-				return (c.append_send_buffer(c.getColNick() + " 401 :No such nick") ,false);
-			(*recp).append_send_buffer(c.getColNick() + " PRIVMSG " + msg);
+				return (c.sendToClient(c.getColNick() + " 401 :No such nick") ,false);
+			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + msg);
 		}
 	}
 	return true;
@@ -189,7 +192,7 @@ bool	Server::user(std::string &line, Client &c) {
 //	std::cout << "Uname: " << username << " hostname: " << hostname << " servername: " << servername << " realname: " << realname << std::endl;
 	if (username.empty() || hostname.empty() || servername.empty() || realname.empty() ||
 		username.size() > 9 || hostname.size() > 9)
-		return (c.append_send_buffer(c.getColNick() + " 461 USER :Malformed parameters"), false);
+		return (c.sendToClient(c.getColNick() + " 461 USER :Malformed parameters"), false);
 
 	c.setUsername(username);
 	c.setHostname(hostname);
@@ -197,7 +200,7 @@ bool	Server::user(std::string &line, Client &c) {
 	c.setRealname(realname);
 	c.setIsRegistered(true);
 
-	c.append_send_buffer(":" + servername + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + username + "@" + hostname);
+	c.sendToClient(":" + servername + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + username + "@" + hostname);
 	return true;
 }
 

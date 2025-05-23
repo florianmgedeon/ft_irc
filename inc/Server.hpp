@@ -56,7 +56,7 @@ class Server
         void        accept_client();
         bool        recv_client(int index);
         bool        quit_client(int index);
-        void        ft_send(int fd, const std::string message);
+//        void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
 
 //Parsing and commands

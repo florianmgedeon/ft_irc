@@ -72,7 +72,7 @@ void Channel::sendChannelMessage(std::string sender, std::string message) {
 		if ((*it)->getNickname() == sender)
 			return;
 	for (std::list<Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
-		(*it)->append_send_buffer(message);
+		(*it)->sendToClient(message);
 }
 
 bool	Channel::isMemberBanned(Client *client) {

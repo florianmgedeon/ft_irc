@@ -4,26 +4,28 @@ Client::Client()
 {
 	_nickname = _username = _realname = _hostname = _servername = "*";
     _write_ready = false;
+    _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
-    pfd = NULL;
+    _pfd = NULL;
 }
 
 Client::~Client()
 {
 }
 
-Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), pfd(pfd)
+Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)
 {
 	_nickname = _username = _realname = _servername = "*";
     _write_ready = false;
+    _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
 }
 
 int Client::getFd() const
 {
-    return pfd->fd;
+    return _pfd->fd;
 }
 
 void Client::setWrite(bool write)
@@ -31,14 +33,14 @@ void Client::setWrite(bool write)
     _write_ready = write;
 }
 
-void Client::append_send_buffer(std::string message)
+void Client::sendToClient(std::string message)
 {
 //	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
     send_buffer += message;
     setWrite(true);
 }
 
-void Client::append_recv_buffer(char *buffer)
+void Client::recvFromClient(char *buffer)
 {
     recv_buffer += buffer;
 }
@@ -66,6 +68,11 @@ bool Client::getIsRegistered() const
     return _isRegistered;
 }
 
+void Client::setIsRegistered(bool isRegistered)
+{
+    _isRegistered = isRegistered;
+}
+
 void Client::setUsername(std::string username)
 {
     _username = username;
@@ -86,9 +93,9 @@ void Client::setRealname(std::string realname)
     _realname = realname;
 }
 
-void Client::setIsRegistered(bool isRegistered)
+void Client::setCapNegotiation(bool capNegotiation)
 {
-    _isRegistered = isRegistered;
+    _capNegotiation = capNegotiation;
 }
 bool Client::isIsPasswordValid() const {
 	return _isPasswordValid;

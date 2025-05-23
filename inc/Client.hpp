@@ -2,7 +2,6 @@
 
 #include "Server.hpp"
 
-
 class Client
 {
     private:
@@ -12,9 +11,10 @@ class Client
         std::string _hostname;
         std::string _servername;
         bool        _write_ready;
+        bool        _capNegotiation;
         bool        _isPasswordValid;
         bool        _isRegistered;
-        pollfd      *pfd;
+        pollfd      *_pfd;
 
     public:
         std::string send_buffer;
@@ -24,19 +24,19 @@ class Client
         ~Client();
         void        setWrite(bool write);
         int         getFd() const;
-        void        append_send_buffer(std::string message);
-        void        append_recv_buffer(char *buffer);
+        void        sendToClient(std::string message);
+        void        recvFromClient(char *buffer);
         void        setNickname(std::string nickname);
         std::string &getNickname(void);
         std::string getColNick(void);
         std::string getNickUserHost(void);
         bool        getIsRegistered() const;
+        void        setIsRegistered(bool isRegistered);
         void        setUsername(std::string username);
         void        setHostname(std::string hostname);
         void        setServername(std::string servername);
         void        setRealname(std::string realname);
-        void        setIsRegistered(bool isRegistered);
-
+        void        setCapNegotiation(bool capNegotiation);
         bool		isIsPasswordValid() const;
         void		setIsPasswordValid(bool isPasswordValid);
 };

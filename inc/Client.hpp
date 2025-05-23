@@ -13,7 +13,10 @@ class Client
         std::string _hostname;
         std::string _servername;
         bool        _write_ready;
+        bool        _capNegotiation;
         bool        _isPasswordValid;
+        bool        _isNickValid;
+        bool        _isUSERcomplete;
         bool        _isRegistered;
         pollfd      *pfd;
 
@@ -29,12 +32,23 @@ class Client
         void        append_recv_buffer(char *buffer);
         void        setNickname(std::string nickname);
         std::string &getNickname(void);
-        bool        getIsRegistered() const;
         void        setUsername(std::string username);
         void        setHostname(std::string hostname);
         void        setServername(std::string servername);
         void        setRealname(std::string realname);
+        void        setIsPasswordValid(bool isPasswordValid);
         void        setIsRegistered(bool isRegistered);
+        bool        getIsPasswordValid() const;
+        bool        getIsRegistered() const;
+        void        setCapNegotiation(bool capNegotiation);
+        bool        getCapNegotiation() const;
+        void        setIsNickValid(bool isNickValid);
+        bool        getIsNickValid() const;
+        void        setIsUSERcomplete(bool isUSERcomplete);
+        bool        getIsUSERcomplete() const;
+        std::string getUsername() const;
+        std::string getHostname() const;
+        std::string getServername() const;
     };
 
 #endif

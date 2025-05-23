@@ -54,7 +54,7 @@ class Server
         void        handle_send(int index);
         void        create_command(int fd, char *buffer);
         void        find_command(Command command);
-        void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg);
+        void        numeric_reply(int fd, const std::string& code, const std::string& target, const std::string& msg, int index);
 
         void        cap_command(Command command);
         void        pass_command(Command command);

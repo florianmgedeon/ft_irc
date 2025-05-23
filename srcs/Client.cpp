@@ -13,6 +13,8 @@ Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), pfd(pfd
     _write_ready = false;
     _capNegotiation = false;
     _isPasswordValid = false;
+    _isNickValid = false;
+    _isUSERcomplete = false;
     _isRegistered = false;
 }
 
@@ -94,4 +96,39 @@ void Client::setCapNegotiation(bool capNegotiation)
 bool Client::getCapNegotiation() const
 {
     return _capNegotiation;
+}
+
+void Client::setIsNickValid(bool isNickValid)
+{
+    _isNickValid = isNickValid;
+}
+
+bool Client::getIsNickValid() const
+{
+    return _isNickValid;
+}
+
+void Client::setIsUSERcomplete(bool isUSERcomplete)
+{
+    _isUSERcomplete = isUSERcomplete;
+}
+
+bool Client::getIsUSERcomplete() const
+{
+    return _isUSERcomplete;
+}
+
+std::string Client::getUsername() const
+{
+    return _username;
+}
+
+std::string Client::getHostname() const
+{
+    return _hostname;
+}
+
+std::string Client::getServername() const
+{
+    return _servername;
 }

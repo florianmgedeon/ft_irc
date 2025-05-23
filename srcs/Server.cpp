@@ -210,7 +210,7 @@ void Server::pass_command(Command command)
     std::cout << "Password is valid: " << password << std::endl;
 }
 
-void Server::nick_command(Command command)//not just return -> set not set flag (check later in USER) and then do standard precidure for that case
+void Server::nick_command(Command command)
 {
     std::string nickname = command.getParams()[0];
     Client &client = *command.getClient();
@@ -265,7 +265,20 @@ void Server::nick_command(Command command)//not just return -> set not set flag 
         return;
     }
     client.setNickname(nickname);
+    client.setIsNickValid(true);
     std::cout << "Nickname set to: " << nickname << std::endl;
+    if (client.getIsUSERcomplete() && !client.getIsRegistered())
+    {
+        client.setIsRegistered(true);
+        client.send_buffer.clear();
+        std::string username = client.getUsername();
+        std::string hostname = client.getHostname();
+        std::string servername = client.getServername();
+        std::string msg = ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname;
+        ft_send(client.getFd(), msg);
+        handle_send(i);
+        std::cout << "User registered: " << username << std::endl;
+    }
 }
 
 void Server::user_command(Command command)//check what is erroneous!!
@@ -285,16 +298,16 @@ void Server::user_command(Command command)//check what is erroneous!!
         if (i == _nfds)
             i = -1;
     }
-
-    if (!client.getIsPasswordValid())//and NICK worked?
+    if (!client.getIsPasswordValid())
     {
         numeric_reply(client.getFd(), "462", "*", "Unauthorized command", i);
         return;
     }
-
     if (client.getIsRegistered())
+    {
         numeric_reply(client.getFd(), "462", "*", "Unauthorized command (already registered)", i);
-
+        return;
+    }
     if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
     {
         numeric_reply(client.getFd(), "461", "USER", "Not enough parameters", i);
@@ -305,13 +318,17 @@ void Server::user_command(Command command)//check what is erroneous!!
     client.setHostname(hostname);
     client.setServername(servername);
     client.setRealname(realname);
-    client.setIsRegistered(true);
-
-    client.send_buffer.clear();
-    std::string msg = ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname;
-    ft_send(client.getFd(), msg);
-    handle_send(i);
-    std::cout << "User registered: " << username << std::endl;
+    client.setIsUSERcomplete(true);
+    std::cout << "Username set to: " << username << std::endl;
+    if (client.getIsNickValid() && !client.getIsRegistered())
+    {
+        client.setIsRegistered(true);
+        client.send_buffer.clear();
+        std::string msg = ":" + servername + " 001 " + client.getNickname() + " :Welcome to the Internet Relay Network " + client.getNickname() + "!" + username + "@" + hostname;
+        ft_send(client.getFd(), msg);
+        handle_send(i);
+        std::cout << "User registered: " << username << std::endl;
+    }
 }
 
 

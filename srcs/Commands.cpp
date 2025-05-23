@@ -3,9 +3,7 @@ typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator 
 //typedef std::map<std::string, bool(Server::*)(std::string&, Client&)> commandMap;
 
 commandIter	Server::checkCmd(std::string &line) {
-//	if (line[0] == ':') // ignore source param for now
-//		line = line.substr(line.find(" ") + 1);
-	std::string find =line.substr(0, line.find(" ") + 1) ;
+	std::string find = line.substr(0, line.find(" ") + 1) ;
 	return _commandMap.find(find);
 }
 
@@ -14,13 +12,15 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
-	bool res = true;
-	while (res && std::getline(streamline, line, '\r')) {
+//	bool res = true;
+	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
 		commandIter comMapIt = checkCmd(line);
 //		std::cout << "line: |" << line << "|" << std::endl;
-		if (comMapIt != _commandMap.end())
-			res = (this->*(comMapIt->second))(line, *getClient(fd));
+		if (comMapIt != _commandMap.end()) {
+			line = line.substr(comMapIt->first.size());
+			/*res = */(this->*(comMapIt->second))(line, *getClient(fd));
+		}
 	}
 	return true;
 }
@@ -35,7 +35,7 @@ bool	Server::cap(std::string &line, Client &c) {
 	if (line.substr(0, 4).compare ("REQ "))	//TODO: parse and actually do request
 		return (c.sendToClient(_serverName + ": CAP * ACK " + *(line.begin() + 5)), true);
 	if (line.substr(0, 3).compare ("END"))
-			return (c.setCapNegotiation(true), true);
+		return (c.setCapNegotiation(true), true);
 	return false;
 }
 //TODO: invite
@@ -146,7 +146,7 @@ bool	Server::privmsg(std::string &line, Client &c) {
 	std::string msg = line.substr(line.find(':') + 1);
 	if (!msg.size())
 		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
-	line = line.substr(0, line.find(':'));
+	line = line.substr(0, line.find(':') - 1);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
 	bool toChannel = false;
@@ -169,6 +169,7 @@ bool	Server::privmsg(std::string &line, Client &c) {
 			std::vector<Client>::iterator recp = getClient(line);
 			if (recp == _clients.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such nick") ,false);
+//			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
 			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + msg);
 		}
 	}

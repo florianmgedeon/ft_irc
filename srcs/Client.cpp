@@ -31,12 +31,13 @@ int Client::getFd() const
 void Client::setWrite(bool write)
 {
     _write_ready = write;
+    _pfd->events |= POLLOUT;
 }
 
 void Client::sendToClient(std::string message)
 {
 //	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
-    send_buffer += message;
+    send_buffer += message + "\r\n";
     setWrite(true);
 }
 

@@ -1,11 +1,5 @@
 #include "../inc/Server.hpp"
 typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator commandIter;
-//typedef std::map<std::string, bool(Server::*)(std::string&, Client&)> commandMap;
-
-commandIter	Server::checkCmd(std::string &line) {
-	std::string find = line.substr(0, line.find(" ") + 1) ;
-	return _commandMap.find(find);
-}
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 //	std::cout << "in buffer: |" << buffer << "|" << std::endl;
@@ -15,7 +9,9 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 //	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
-		commandIter comMapIt = checkCmd(line);
+		std::string find = line.substr(0, line.find(" ") + 1) ;
+		transform(find.begin(), find.end(), find.begin(), ::toupper);
+		commandIter comMapIt = _commandMap.find(find);
 //		std::cout << "line: |" << line << "|" << std::endl;
 		if (comMapIt != _commandMap.end()) {
 			line = line.substr(comMapIt->first.size());
@@ -45,36 +41,40 @@ bool	Server::invite(std::string &line, Client &c) {
 }
 
 bool	Server::join(std::string &line, Client &c) {
+//	std::cout << "join inb4: |" << line << "|" << std::endl;
 	std::string pwds, readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
-	Channel ch;
-	(void)c;
-	if (line.find(' ')) {
+	if (line.find(' ') != std::string::npos) {
 		pwds = line.substr(line.find(' '));
 		line = line.substr(0, line.find(' '));
+		pwdstream << pwds;
 	}
-	pwdstream << pwds;
 	chanNamestream << line;
 	while (std::getline(chanNamestream, readName, ',')) {
 		if (_channels.find(readName) == _channels.end()) {	//create channel
 			if (readName[0] == '&') {	//create pw-locked channel
 				std::getline(pwdstream, readPwd, ',');
+				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(readPwd)));
 			} else if (readName[0] == '#') {	//create open chanel
+				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel()));
 			} else return (c.sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
 
 		} else {	//try joining existing channel
-			if (_channels[readName].isMemberBanned(&c)) {
+			if (_channels[readName].isMemberBanned(c.getNickname())) {
 				return (c.sendToClient(c.getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
 			} else if (readName[0] == '&') {	//join pw-locked channel
 				std::getline(pwdstream, readPwd, ',');
 				if (!(_channels[readName].checkPassword(readPwd)))
 					return (c.sendToClient(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
 				else {
-//					_channels[readName]._members.push_back(&c); braucht an setter
-
+					_channels[readName].addMember(&c);
+					_channels[readName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + readName);
 				}
+			} else if (readName[0] == '#') {	//join open channel
+				_channels[readName].addMember(&c);
+				_channels[readName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + readName);
 			}
 		}
 	}
@@ -106,7 +106,7 @@ bool	Server::nick(std::string &line, Client &c) {
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
 	if (strchr("&#:", line[0]) || line.find_first_of(" \r\n") != std::string::npos || line.size() > 9)
-		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneus nickname"), false);
+		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
 	if (getClient(line) != _clients.end())
 		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
 	for (size_t i = 0; i < _clients.size(); i++)
@@ -156,7 +156,7 @@ bool	Server::privmsg(std::string &line, Client &c) {
 			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
 			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
 			else if (line[0] == '#' || line[0] == '&') {
-				line = line.substr(1);
+//				line = line.substr(1);
 				toChannel = true;
 			}
 		}

@@ -9,28 +9,32 @@ class Client;
 class Channel
 {
     private:
-        std::string         _name;
+//        std::string         _name;
         std::string         _topic;                  
         std::string         _password;                
         //int                 _userLimit;              
         //bool                _inviteOnly;
         //bool                _topicRestricted;
         bool                _hasPassword;
-        std::list<Client *> _members; // could be a map<nickname, Client *> to be easier to search?
-        std::list<Client *> _operators;
-        std::list<Client *> _banlist;
+        std::map<std::string, Client *> _members;
+        std::map<std::string, Client *> _operators;
+        std::map<std::string, Client *> _banlist;//TODO: research how bans are handled and saved überhaupt
 
     public:
         Channel();
         ~Channel();
         Channel(std::string pwd);
-        bool isMember(Client *client);
-        bool isOperator(Client *client);
+
+        bool addMember(Client *client);
+        bool isMember(std::string &nick);
         void removeMember(Client *client);
-        bool isEmpty();
+
         void addOperator(Client *client);
+        bool isOperator(std::string &nick);
         void removeOperator(Client *client);
+
+        bool isEmpty();
         void sendChannelMessage(std::string sender, std::string message);
-        bool isMemberBanned(Client *client);
+        bool isMemberBanned(std::string &nick);
         bool checkPassword(std::string in);
 };

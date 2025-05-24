@@ -17,6 +17,7 @@
 #include "Client.hpp"
 #include "Channel.hpp"
 #include <cerrno>
+#include <bits/stdc++.h>
 
 class Channel;
 class Client;
@@ -25,9 +26,9 @@ class Server
 {
     private:
         //boilerplate for server function
-        typedef bool(Server::*cmd)(std::string&, Client&);
-        typedef std::map<std::string, cmd> commandMap;
-        typedef commandMap::iterator    commandIter;
+        typedef bool(Server::*cmd_t)(std::string&, Client&);
+        typedef std::map<std::string, cmd_t> commandMap_t;
+        typedef commandMap_t::iterator  commandIter;
         int                             _port;
         std::string                     _password;
         pollfd                          _pollfds[SOMAXCONN];
@@ -37,7 +38,7 @@ class Server
         std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
         std::string                     _serverName;
-        commandMap                      _commandMap;
+        commandMap_t                    _commandMap;
 
     public:
         Server(int port, std::string password);
@@ -56,11 +57,9 @@ class Server
         void        accept_client();
         bool        recv_client(int index);
         bool        quit_client(int index);
-//        void        ft_send(int fd, const std::string message);
         void        handle_send(int index);
 
 //Parsing and commands
-        commandIter checkCmd(std::string &line);
         bool        parseClientInput(int fd, std::string buffer);
 
         bool		cap(std::string &line, Client &c);

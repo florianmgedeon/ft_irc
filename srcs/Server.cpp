@@ -22,26 +22,15 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     _commandMap.insert(std::make_pair("USER ",		&Server::user));
 }
 
-Server::~Server()
-{
-}
+Server::~Server() {}
 
-int Server::getPort() const
-{
-    return _port;
-}
+int Server::getPort() const						{return _port;}
+const std::string &Server::getPassword() const	{return _password;}
+void Server::setRunning(bool running)			{_running = running;}
+const std::string& Server::getServerName() const {return _serverName;}
+void Server::setServerName(const std::string &serverName) {_serverName = serverName;}
 
-const std::string &Server::getPassword() const
-{
-    return _password;
-}
-
-void Server::setRunning(bool running)
-{
-    _running = running;
-}
-
-std::vector<Client>::iterator 	Server::getClient(int fd) {
+std::vector<Client>::iterator	Server::getClient(int fd) {
 	std::vector<Client>::iterator i = _clients.begin();
 	for (; i != _clients.end(); i++)
 		if ((*i).getFd() == fd)
@@ -49,7 +38,7 @@ std::vector<Client>::iterator 	Server::getClient(int fd) {
 	return i;
 }
 
-std::vector<Client>::iterator 	Server::getClient(const std::string nickname) {
+std::vector<Client>::iterator	Server::getClient(const std::string nickname) {
 	std::vector<Client>::iterator i = _clients.begin();
 	for (; i != _clients.end(); i++) {
 		std::string temp = (*i).getNickname();
@@ -59,38 +48,7 @@ std::vector<Client>::iterator 	Server::getClient(const std::string nickname) {
 	return i;
 }
 
-const std::string& Server::getServerName() const {
-	return _serverName;
-}
-
-void Server::setServerName(const std::string &serverName) {
-	_serverName = serverName;
-}
-
-//void Server::ft_send(int fd, std::string message)
-//{
-//    Client &client = *(getClient(fd));
-//    if (client.getFd() == -1)
-//        return;
-////    client.send_buffer.clear();//??????????????????????????
-//    client.send_buffer += message + "\r\n";
-//    client.setWrite(true);
-//    for (nfds_t i = 0; i < _nfds; ++i)
-//    {
-//        if (_pollfds[i].fd == fd)
-//        {
-//            if (_pollfds[i].events & POLLOUT)
-//                return;
-//            _pollfds[i].events |= POLLOUT;
-//            break;
-//        }
-//    }
-//}
-
-
 //============================================ poll loop ====================================//
-
-
 
 void Server::handle_send(int index)
 {
@@ -196,7 +154,7 @@ bool Server::quit_client(int index)
 
     for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
     {
-        if (it->second.isMember(&_clients[fd]))
+        if (it->second.isMember(_clients[fd].getNickname()))
         {
             it->second.removeMember(&_clients[fd]);
             //ft_send(fd, "Client disconnected"); //broadcast?

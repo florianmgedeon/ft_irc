@@ -25,12 +25,12 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
-	if (line.substr(0, 2).compare ("LS"))
-		return (c.sendToClient(_serverName + ": CAP * LS"), true);
+	if (line.substr(0, 2) == "LS")
+		return (c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
 //	if (line.substr(0, 4).compare ("LIST"))
-	if (line.substr(0, 4).compare ("REQ "))	//TODO: parse and actually do request
-		return (c.sendToClient(_serverName + ": CAP * ACK " + *(line.begin() + 5)), true);
-	if (line.substr(0, 3).compare ("END"))
+	if (line.substr(0, 4) == "REQ ")//TODO: parse and actually do request
+		return (c.sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
+	if (line.substr(0, 3) == "END")
 		return (c.setCapNegotiation(true), true);
 	return false;
 }

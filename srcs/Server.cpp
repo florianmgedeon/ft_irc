@@ -139,7 +139,7 @@ bool Server::recv_client(int index)
     }
     else
     {
-//        std::cout << "buffer from recv: " << buffer << std::endl;
+        std::cout << "buffer from recv: " << buffer << std::endl;
         parseClientInput(client_fd, std::string(buffer));
         return false;
     }

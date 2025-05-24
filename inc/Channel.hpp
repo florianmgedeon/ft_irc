@@ -28,6 +28,7 @@ class Channel
         bool addMember(Client *client);
         bool isMember(std::string &nick);
         void removeMember(Client *client);
+        void status();
 
         void addOperator(Client *client);
         bool isOperator(std::string &nick);

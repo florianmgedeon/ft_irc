@@ -143,6 +143,7 @@ bool	Server::pong(std::string &line, Client &c) {
 }
 
 bool	Server::privmsg(std::string &line, Client &c) {
+	std::cout << "line; |" << line << "|" << std::endl;
 	std::string msg = line.substr(line.find(':') + 1);
 	if (!msg.size())
 		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
@@ -152,25 +153,24 @@ bool	Server::privmsg(std::string &line, Client &c) {
 	bool toChannel = false;
 
 	{//TODO: parse name parameter along commas for several recipients
-		while (strchr("@%#&", line[0])) {
+		while (strchr("@%", line[0])) {
 			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
 			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
-			else if (line[0] == '#' || line[0] == '&') {
-//				line = line.substr(1);
-				toChannel = true;
-			}
 		}
-
+		if (line[0] == '#' || line[0] == '&')
+				toChannel = true;
 		if (toChannel) {
 			if (_channels.find(line) == _channels.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such channel") ,false);
-			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + msg);
+			_channels[line].sendChannelMessage(c.getNickname(), c.getNickname() + ":" + c.getNickUserHost() + " PRIVMSG " + line + " " + msg);
+//			_channels[line].sendChannelMessage(c.getNickname(), c.getColNick() + " PRIVMSG " + line + " " + msg);
 		} else {
 			std::vector<Client>::iterator recp = getClient(line);
 			if (recp == _clients.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such nick") ,false);
 //			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
-			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + msg);
+//			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + line + " " + msg);
+			(*recp).sendToClient(c.getNickname() + ":" + c.getNickUserHost() + " PRIVMSG " + line + " " + msg);
 		}
 	}
 	return true;
@@ -186,8 +186,8 @@ bool	Server::user(std::string &line, Client &c) {
 	std::stringstream streamline;
 	streamline << line;
 	std::getline(streamline, username, ' ');
-	std::getline(streamline, hostname, ' ');
 	std::getline(streamline, servername, ' ');
+	std::getline(streamline, hostname, ' ');
 	std::getline(streamline, dummy, ':');
 	std::getline(streamline, realname, '\0');
 //	std::cout << "Uname: " << username << " hostname: " << hostname << " servername: " << servername << " realname: " << realname << std::endl;

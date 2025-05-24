@@ -36,7 +36,7 @@ void Client::setWrite(bool write)
 
 void Client::sendToClient(std::string message)
 {
-//	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
+	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
     send_buffer += message + "\r\n";
     setWrite(true);
 }

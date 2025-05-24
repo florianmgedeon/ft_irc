@@ -12,6 +12,7 @@ bool Channel::addMember(Client *client) {
 	if (_members.find(client->getNickname()) == _members.end() &&
 		_banlist.find(client->getNickname()) == _banlist.end()) {
 		_members.insert(std::make_pair(client->getNickname(), client));
+		status();
 		return true;
 	}
 	return false;
@@ -23,6 +24,13 @@ void Channel::removeMember(Client *client) {
 	_members.erase(client->getNickname());
 	if (isOperator(client->getNickname()))
 		removeOperator(client);
+}
+
+void	Channel::status() {
+	std::cout << "Status: ";
+	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); it++)
+		std::cout << it->first << " ";
+	std::cout << std::endl;
 }
 
 //--------------------OPERATORS--------------------------
@@ -41,6 +49,7 @@ void Channel::removeOperator(Client *client) {_operators.erase(client->getNickna
 bool Channel::isEmpty() {return _members.empty();}
 
 void Channel::sendChannelMessage(std::string sender, std::string message) {
+	std::cout << "channel message: " << message << std::endl;
 	if (!isMemberBanned(sender))
 	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
 		(*it).second->sendToClient(message);

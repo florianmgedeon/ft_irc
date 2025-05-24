@@ -37,6 +37,7 @@ class Client
         void        setServername(std::string servername);
         void        setRealname(std::string realname);
         void        setCapNegotiation(bool capNegotiation);
+        bool        getCapNegotiation() const;
         bool		isIsPasswordValid() const;
         void		setIsPasswordValid(bool isPasswordValid);
 };

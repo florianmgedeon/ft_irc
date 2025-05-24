@@ -121,6 +121,8 @@ bool	Server::part(std::string &line, Client &c) {
 }
 
 bool	Server::pass(std::string &line, Client &c) {
+	if (c.getCapNegotiation() == false)
+		return (c.sendToClient(c.getColNick() + " 421 PASS :CAP negotiation not finished"), false);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c.getIsRegistered())
@@ -129,7 +131,12 @@ bool	Server::pass(std::string &line, Client &c) {
 		{std::cout << "Password is valid: " << line << std::endl;
 		return (c.setIsPasswordValid(true), true);
 	}
-	else return (c.sendToClient(c.getColNick() + " 464 :Password incorrect"), false);
+	else 
+	{
+		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
+		quit_client(getIndexofClient(c.getFd()));
+		return (false);
+	}
 }
 
 bool	Server::ping(std::string &line, Client &c) {

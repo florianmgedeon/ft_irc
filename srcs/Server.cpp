@@ -24,6 +24,14 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 
 Server::~Server() {}
 
+//getindexofclient
+int Server::getIndexofClient(int fd) {
+    for (size_t i = 0; i < _clients.size(); i++)
+        if (_clients[i].getFd() == fd)
+            return i;
+    return -1;
+}
+
 int Server::getPort() const						{return _port;}
 const std::string &Server::getPassword() const	{return _password;}
 void Server::setRunning(bool running)			{_running = running;}

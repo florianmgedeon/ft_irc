@@ -50,6 +50,7 @@ class Server
         void setServerName(const std::string &serverName);
         std::vector<Client>::iterator getClient(int fd);
         std::vector<Client>::iterator getClient(const std::string nickname);
+        int         getIndexofClient(int fd);
         int&		getClientFd(Client &c, int fd);
         void        start();
         void        ft_socket();

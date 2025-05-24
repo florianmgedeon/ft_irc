@@ -105,3 +105,8 @@ bool Client::isIsPasswordValid() const {
 void Client::setIsPasswordValid(bool isPasswordValid) {
 	_isPasswordValid = isPasswordValid;
 }
+
+bool Client::getCapNegotiation() const
+{
+    return _capNegotiation;
+}

@@ -103,15 +103,36 @@ bool	Server::names(std::string &line, Client &c) {
 }
 
 bool	Server::nick(std::string &line, Client &c) {
+	if (c.getIsPasswordValid() == false)
+		return (false);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
-	if (strchr("&#:", line[0]) || line.find_first_of(" \r\n") != std::string::npos || line.size() > 9)
+
+	const std::string specials = "[]\\`_^{|}";
+	if (line.length() > 30 || (!isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+    for (size_t j = 1; j < line.length(); ++j)
+    {
+        char x = line[j];
+        if (!isalnum(x) && specials.find(x) == std::string::npos)
+			return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+    }
+    if (line.find_first_of("0123456789") != std::string::npos && line.find_first_not_of("0123456789") == std::string::npos)
+		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+
 	if (getClient(line) != _clients.end())
 		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
+	c.setNickname(line);
+	c.setIsNickValid(true);
 	for (size_t i = 0; i < _clients.size(); i++)
 		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
-	c.setNickname(line);
+	std::cout << "Nickname set to: " << line << std::endl;
+	if (c.getIsUserComplete() && !c.getIsRegistered())
+	{
+		c.setIsRegistered(true);
+		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		std::cout << "User registered: " << c.getUsername() << std::endl;
+	}
 	return true;
 }
 

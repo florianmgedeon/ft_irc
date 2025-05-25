@@ -8,17 +8,17 @@ Channel::Channel(std::string pwd): _password(pwd) {_hasPassword = true;}
 
 //----------------------MEMBERS----------------------------
 
-bool Channel::addMember(Client *client) {
-	if (_members.find(client->getNickname()) == _members.end() &&
-		_banlist.find(client->getNickname()) == _banlist.end()) {
+bool Channel::addMember(Client *client, bool makeOp) {
+	if (!isMember(client->getNickname()) && !isMemberBanned(client->getNickname())) {
 		_members.insert(std::make_pair(client->getNickname(), client));
-		status();
+		if (makeOp)
+			addOperator(client);
 		return true;
 	}
 	return false;
 }
 
-bool Channel::isMember(std::string &nick) {return _members.find(nick) != _members.end();}
+bool Channel::isMember(std::string nick) {return _members.find(nick) != _members.end();}
 
 void Channel::removeMember(Client *client) {
 	_members.erase(client->getNickname());
@@ -26,21 +26,16 @@ void Channel::removeMember(Client *client) {
 		removeOperator(client);
 }
 
-void	Channel::status() {
-	std::cout << "Status: ";
-	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); it++)
-		std::cout << it->first << " ";
-	std::cout << std::endl;
-}
-
 //--------------------OPERATORS--------------------------
 
 void Channel::addOperator(Client *client) {
-	if (isMember(client->getNickname()) && !isOperator(client->getNickname()))
+	if (isMember(client->getNickname()) && !isOperator(client->getNickname())) {
 		_operators.insert(std::make_pair(client->getNickname(), client));
+		std::cout << "added " << client->getNickname() << " to ops" << std::endl;
+	}
 }
 
-bool Channel::isOperator(std::string &nick) {return _operators.find(nick) != _operators.end();}
+bool Channel::isOperator(std::string nick) {return _operators.find(nick) != _operators.end();}
 
 void Channel::removeOperator(Client *client) {_operators.erase(client->getNickname());}
 
@@ -49,12 +44,28 @@ void Channel::removeOperator(Client *client) {_operators.erase(client->getNickna
 bool Channel::isEmpty() {return _members.empty();}
 
 void Channel::sendChannelMessage(std::string sender, std::string message) {
-	std::cout << "channel message: " << message << std::endl;
+//	std::cout << "channel message: " << message << std::endl;
 	if (!isMemberBanned(sender))
-	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
-		(*it).second->sendToClient(message);
+		for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
+			if (it->first != sender)
+				it->second->sendToClient(message);
 }
 
 bool	Channel::isMemberBanned(std::string &nick) {return _banlist.find(nick) != _banlist.end();}
 
 bool	Channel::checkPassword(std::string in) {return in == _password ? true : false;}
+
+const std::string&	Channel::getTopic() const {return _topic;}
+
+void	Channel::setTopic(const std::string &topic) {_topic = topic;}
+
+bool	Channel::hasTopic() {return _topic.size() == 0 ? false : true;}
+
+std::string	Channel::memberlist() {
+	std::string res;
+	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); it++) {
+		if (isOperator(it->first)) res += "@";
+		res = res + it->first + " ";
+	}
+	return res;
+}

@@ -1,23 +1,23 @@
 #pragma once
 
-#include <iostream>
-#include <sstream>
-#include <string>
+#include <arpa/inet.h>
+#include <bits/stdc++.h>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <fcntl.h>
-#include <poll.h>
+#include <iostream>
 #include <map>
+#include <netinet/in.h>
+#include <poll.h>
+#include <sstream>
+#include <string>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <vector>
-#include "Client.hpp"
 #include "Channel.hpp"
-#include <cerrno>
-#include <bits/stdc++.h>
+#include "Client.hpp"
 
 class Channel;
 class Client;
@@ -40,6 +40,26 @@ class Server
         std::string                     _serverName;
         commandMap_t                    _commandMap;
 
+//Parsing and commands
+        bool        parseClientInput(int fd, std::string buffer);
+
+        bool		cap(std::string &line, Client &c);
+        bool		invite(std::string &line, Client &c);
+        bool		join(std::string &line, Client &c);
+        bool		kick(std::string &line, Client &c);
+        bool		list(std::string &line, Client &c);
+        bool		mode(std::string &line, Client &c);
+        bool		names(std::string &line, Client &c);
+        bool		nick(std::string &line, Client &c);
+        bool		part(std::string &line, Client &c);
+        bool		pass(std::string &line, Client &c);
+        bool		ping(std::string &line, Client &c);
+        bool		pong(std::string &line, Client &c);
+        bool		privmsg(std::string &line, Client &c);
+        bool		topic(std::string &line, Client &c);
+        bool		user(std::string &line, Client &c);
+
+        void		join_channel(std::string &channelName, Client &c, bool makeOp);
     public:
         Server(int port, std::string password);
         ~Server();
@@ -59,22 +79,5 @@ class Server
         bool        quit_client(int index);
         void        handle_send(int index);
 
-//Parsing and commands
-        bool        parseClientInput(int fd, std::string buffer);
 
-        bool		cap(std::string &line, Client &c);
-        bool		invite(std::string &line, Client &c);
-        bool		join(std::string &line, Client &c);
-        bool		kick(std::string &line, Client &c);
-        bool		list(std::string &line, Client &c);
-        bool		mode(std::string &line, Client &c);
-        bool		names(std::string &line, Client &c);
-        bool		nick(std::string &line, Client &c);
-        bool		part(std::string &line, Client &c);
-        bool		pass(std::string &line, Client &c);
-        bool		ping(std::string &line, Client &c);
-        bool		pong(std::string &line, Client &c);
-        bool		privmsg(std::string &line, Client &c);
-        bool		topic(std::string &line, Client &c);
-        bool		user(std::string &line, Client &c);
 };

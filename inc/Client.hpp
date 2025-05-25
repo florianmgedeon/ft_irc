@@ -30,6 +30,7 @@ class Client
         std::string &getNickname(void);
         std::string getColNick(void);
         std::string getNickUserHost(void);
+        std::string getColHost(void);
         bool        getIsRegistered() const;
         void        setIsRegistered(bool isRegistered);
         void        setUsername(std::string username);

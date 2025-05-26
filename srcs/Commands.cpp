@@ -2,7 +2,6 @@
 typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator commandIter;
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
-//	std::cout << "in buffer: |" << buffer << "|" << std::endl;
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
@@ -11,11 +10,14 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 		std::getline(streamline, dummy, '\n');
 		std::string find = line.substr(0, line.find(" ") + 1) ;
 		transform(find.begin(), find.end(), find.begin(), ::toupper);
-		commandIter comMapIt = _commandMap.find(find);
-//		std::cout << "line: |" << line << "|" << std::endl;
+		commandIter comMapIt = _commandMap.find(find);	//find upcased command string in command map
 		if (comMapIt != _commandMap.end()) {
-			line = line.substr(comMapIt->first.size());
-			/*res = */(this->*(comMapIt->second))(line, *getClient(fd));
+			line = line.substr(comMapIt->first.size());	//advance line string by cmd size
+			/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
+		} else {
+			Client c = *getClient(fd);
+			c.sendToClient(c.getColNick() + " "+ find + " :Unknown command");
+//			return false;
 		}
 	}
 	return true;
@@ -26,12 +28,12 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
 	if (line.substr(0, 2) == "LS")
-		return (c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
+		return (c.setCapNegotiation(true), c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
 //	if (line.substr(0, 4).compare ("LIST"))
 	if (line.substr(0, 4) == "REQ ")//TODO: parse and actually do request
 		return (c.sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
 	if (line.substr(0, 3) == "END")
-		return (c.setCapNegotiation(true), true);
+		return (true);
 	return false;
 }
 //TODO: invite

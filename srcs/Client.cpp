@@ -110,3 +110,43 @@ bool Client::isIsPasswordValid() const {
 void Client::setIsPasswordValid(bool isPasswordValid) {
 	_isPasswordValid = isPasswordValid;
 }
+
+bool Client::getIsPasswordValid() const {
+	return _isPasswordValid;
+}
+
+bool Client::getCapNegotiation() const
+{
+    return _capNegotiation;
+}
+
+void Client::setIsNickValid(bool isNickValid) {
+    _isNickValid = isNickValid;
+}
+
+bool Client::getIsNickValid() const {
+    return _isNickValid;
+}
+
+void Client::setIsUserComplete(bool isUserComplete) {
+    _isUserComplete = isUserComplete;
+}
+
+bool Client::getIsUserComplete() const {
+    return _isUserComplete;
+}
+
+std::string Client::getUsername(void) const
+{
+    return _username;
+}
+
+std::string Client::getHostname(void) const
+{
+    return _hostname;
+}
+
+std::string Client::getServername(void) const
+{
+    return _servername;
+}

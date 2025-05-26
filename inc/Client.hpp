@@ -15,6 +15,8 @@ class Client
         bool        _isPasswordValid;
         bool        _isRegistered;
         pollfd      *_pfd;
+        bool        _isUserComplete;
+        bool        _isNickValid;
 
     public:
         std::string send_buffer;
@@ -40,4 +42,14 @@ class Client
         void        setCapNegotiation(bool capNegotiation);
         bool		isIsPasswordValid() const;
         void		setIsPasswordValid(bool isPasswordValid);
+        bool        getIsPasswordValid() const;
+        bool        getIsUserComplete() const;
+        void        setIsUserComplete(bool isUserComplete);
+        bool        getIsNickValid() const;
+        void        setIsNickValid(bool isNickValid);
+        bool        getCapNegotiation() const;
+        std::string getHostname() const;
+        std::string getUsername() const;
+        std::string getServername() const;
+
 };

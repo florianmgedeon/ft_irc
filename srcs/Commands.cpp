@@ -26,10 +26,10 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
 	if (line.substr(0, 2) == "LS")
-		return (c.sendToClient(_serverName + ": CAP * LS"), true);
-//	if (line.substr(0, 4)  == "LIST")
-	if (line.substr(0, 4) == "REQ ")	//TODO: parse and actually do request
-		return (c.sendToClient(_serverName + ": CAP * ACK " + *(line.begin() + 5)), true);
+		return (c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
+//	if (line.substr(0, 4).compare ("LIST"))
+	if (line.substr(0, 4) == "REQ ")//TODO: parse and actually do request
+		return (c.sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
 	if (line.substr(0, 3) == "END")
 		return (c.setCapNegotiation(true), true);
 	return false;
@@ -123,15 +123,36 @@ bool	Server::names(std::string &line, Client &c) {
 }
 
 bool	Server::nick(std::string &line, Client &c) {
+	if (c.getIsPasswordValid() == false)
+		return (false);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
-	if (strchr("&#:", line[0]) || line.find_first_of(" \r\n") != std::string::npos || line.size() > 9)
+
+	const std::string specials = "[]\\`_^{|}";
+	if (line.length() > 30 || (!isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+    for (size_t j = 1; j < line.length(); ++j)
+    {
+        char x = line[j];
+        if (!isalnum(x) && specials.find(x) == std::string::npos)
+			return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+    }
+    if (line.find_first_of("0123456789") != std::string::npos && line.find_first_not_of("0123456789") == std::string::npos)
+		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
+
 	if (getClient(line) != _clients.end())
 		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
+	c.setNickname(line);
+	c.setIsNickValid(true);
 	for (size_t i = 0; i < _clients.size(); i++)
 		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
-	c.setNickname(line);
+	std::cout << "Nickname set to: " << line << std::endl;
+	if (c.getIsUserComplete() && !c.getIsRegistered())
+	{
+		c.setIsRegistered(true);
+		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		std::cout << "User registered: " << c.getUsername() << std::endl;
+	}
 	return true;
 }
 
@@ -140,7 +161,16 @@ bool	Server::part(std::string &line, Client &c) {
 	return (true);
 }
 
+int Server::getIndexofClient(int fd) {
+    for (size_t i = 0; i < _clients.size(); i++)
+        if (_clients[i].getFd() == fd)
+            return i;
+    return -1;
+}
+
 bool	Server::pass(std::string &line, Client &c) {
+	if (c.getCapNegotiation() == false)
+		return (c.sendToClient(c.getColNick() + " 421 PASS :CAP negotiation not finished"), false);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c.getIsRegistered())
@@ -149,7 +179,12 @@ bool	Server::pass(std::string &line, Client &c) {
 		{std::cout << "Password is valid: " << line << std::endl;
 		return (c.setIsPasswordValid(true), true);
 	}
-	else return (c.sendToClient(c.getColNick() + " 464 :Password incorrect"), false);
+	else 
+	{
+		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
+		quit_client(getIndexofClient(c.getFd()));
+		return (false);
+	}
 }
 
 bool	Server::ping(std::string &line, Client &c) {
@@ -218,18 +253,31 @@ bool	Server::user(std::string &line, Client &c) {
 	std::getline(streamline, servername, ' ');
 	std::getline(streamline, dummy, ':');
 	std::getline(streamline, realname, '\0');
-//	std::cout << "Uname: " << username << " hostname: " << hostname << " servername: " << servername << " realname: " << realname << std::endl;
-	if (username.empty() || hostname.empty() || servername.empty() || realname.empty() ||
-		username.size() > 9 || hostname.size() > 9)
-		return (c.sendToClient(c.getColNick() + " 461 USER :Malformed parameters"), false);
+	std::cout << "getIsPasswordValid: "<< c.getIsPasswordValid() << std::endl;
+	if (c.getIsPasswordValid() == false)
+		return (false);
+	if (c.getIsRegistered())
+		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
+	if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
+		return (c.sendToClient(c.getColNick() + " 461 USER :Not enough parameters"), false);
+	if (username.length() > 30 || hostname.length() > 63 || realname.length() > 128)
+		return (c.sendToClient(c.getColNick() + " 432 :Erroneous USER parameters"), false);
+	std::string illegal = " \r\n:";
+	if (username.find_first_of(illegal) != std::string::npos)
+		return (c.sendToClient(c.getColNick() + " 432 :Erroneous username"), false);
 
 	c.setUsername(username);
 	c.setHostname(hostname);
 	c.setServername(servername);
 	c.setRealname(realname);
-	c.setIsRegistered(true);
-
-	c.sendToClient(":" + servername + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + username + "@" + hostname);
-	return true;
+	c.setIsUserComplete(true);
+	std::cout << "Username set to: " << username << std::endl;
+	if (c.getIsNickValid() && !c.getIsRegistered())
+	{
+		c.setIsRegistered(true);
+		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		std::cout << "User registered: " << username << std::endl;
+		return (true);
+	}
+	return (false);
 }
-

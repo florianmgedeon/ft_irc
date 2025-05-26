@@ -78,6 +78,6 @@ class Server
         bool        recv_client(int index);
         bool        quit_client(int index);
         void        handle_send(int index);
-
+        int         getIndexofClient(int fd);
 
 };

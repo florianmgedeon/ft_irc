@@ -168,6 +168,7 @@ bool Server::quit_client(int index)
             ++it;
     }
 
+    _clients.erase(getClient(fd));
     close(fd);
 
     if (_nfds > 2)

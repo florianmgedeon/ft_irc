@@ -40,6 +40,13 @@ bool	Server::invite(std::string &line, Client &c) {
 	return (true);
 }
 
+void	Server::join_channel(std::string &channelName, Client &c, bool makeOp) {
+	_channels[channelName].addMember(&c, makeOp);
+	_channels[channelName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + channelName);
+	topic(channelName, c);
+	names(channelName, c);
+}
+
 bool	Server::join(std::string &line, Client &c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
 	std::string pwds, readName, readPwd;
@@ -56,9 +63,11 @@ bool	Server::join(std::string &line, Client &c) {
 				std::getline(pwdstream, readPwd, ',');
 				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(readPwd)));
+				join_channel(readName, c, true);
 			} else if (readName[0] == '#') {	//create open chanel
 				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel()));
+				join_channel(readName, c, true);
 			} else return (c.sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
 
 		} else {	//try joining existing channel
@@ -69,12 +78,10 @@ bool	Server::join(std::string &line, Client &c) {
 				if (!(_channels[readName].checkPassword(readPwd)))
 					return (c.sendToClient(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
 				else {
-					_channels[readName].addMember(&c);
-					_channels[readName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + readName);
+					join_channel(readName, c, false);
 				}
 			} else if (readName[0] == '#') {	//join open channel
-				_channels[readName].addMember(&c);
-				_channels[readName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + readName);
+				join_channel(readName, c, false);
 			}
 		}
 	}
@@ -98,8 +105,21 @@ bool	Server::mode(std::string &line, Client &c) {
 }
 
 bool	Server::names(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
+	std::cout << "line: |" << line << "|" << std::endl;
+	std::stringstream linestream;
+	std::string channelName, res = c.getColHost() + " 353 " + c.getNickname() + " = " + line + " :";
+	linestream << line;
+	int first = 0;
+	while (std::getline(linestream, channelName, ',')) {
+		if (first) {
+			res += ',';
+		}
+		first++;
+		res += _channels[channelName].memberlist();
+	}
+	c.sendToClient(res);
+	c.sendToClient(c.getColHost() + " 366 " + c.getNickname() + " " + channelName + " :End of NAMES list");
+	return true;
 }
 
 bool	Server::nick(std::string &line, Client &c) {
@@ -171,6 +191,7 @@ bool	Server::pong(std::string &line, Client &c) {
 }
 
 bool	Server::privmsg(std::string &line, Client &c) {
+	std::cout << "line; |" << line << "|" << std::endl;
 	std::string msg = line.substr(line.find(':') + 1);
 	if (!msg.size())
 		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
@@ -180,32 +201,39 @@ bool	Server::privmsg(std::string &line, Client &c) {
 	bool toChannel = false;
 
 	{//TODO: parse name parameter along commas for several recipients
-		while (strchr("@%#&", line[0])) {
+		while (strchr("@%", line[0])) {
 			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
 			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
-			else if (line[0] == '#' || line[0] == '&') {
-//				line = line.substr(1);
-				toChannel = true;
-			}
 		}
-
+		if (line[0] == '#' || line[0] == '&')
+				toChannel = true;
 		if (toChannel) {
 			if (_channels.find(line) == _channels.end())
-				return (c.sendToClient(c.getColNick() + " 401 :No such channel") ,false);
-			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + msg);
+				return (c.sendToClient(c.getColNick() + " 401 :No such channel"), false);
+			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + line + " :" + msg);
 		} else {
 			std::vector<Client>::iterator recp = getClient(line);
 			if (recp == _clients.end())
-				return (c.sendToClient(c.getColNick() + " 401 :No such nick") ,false);
-//			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
-			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + msg);
+				return (c.sendToClient(c.getColNick() + " 401 :No such nick"), false);
+			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
+			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
 		}
 	}
 	return true;
 }
 
 bool	Server::topic(std::string &line, Client &c) {
-	(void)line; (void)c;
+	std::string channelName, newTopic;
+		channelName = line.substr(0, line.find(' '));
+	if (line.find(':') != std::string::npos) {	//set new topic
+		newTopic = line.substr(line.find(':') + 1);
+		std::cout << "chanName: |" << channelName << "| newTopic: |" << newTopic << "|" << std::endl;
+		if (_channels.find(line) == _channels.end()) {
+			return (c.sendToClient(c.getColNick() + " 401 :No such channel"), false);
+		}
+		_channels[channelName].setTopic(newTopic);
+	} else if (_channels[line].hasTopic())	//send back topic if set
+		c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + line + " :" + _channels[line].getTopic());
 	return (true);
 }
 

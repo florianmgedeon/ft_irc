@@ -90,7 +90,8 @@ void Server::ft_socket()
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET; //IPv4
     server_addr.sin_port = htons(_port); //port
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); //IP address
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //IP address
+
 
     int opt = 1;
     if (setsockopt(_serverSocketFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) == -1)
@@ -175,7 +176,6 @@ bool Server::quit_client(int index)
             ++it;
     }
 
-//    _clients.erase(fd);
     close(fd);
 
     if (_nfds > 2)

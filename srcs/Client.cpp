@@ -36,7 +36,7 @@ void Client::setWrite(bool write)
 
 void Client::sendToClient(std::string message)
 {
-//	std::cout << "appending @ client " << this->_nickname << " <" << message << ">" << std::endl;
+	std::cout << "send to " << this->_nickname << " <" << message << ">" << std::endl;
     send_buffer += message + "\r\n";
     setWrite(true);
 }
@@ -61,7 +61,12 @@ std::string Client::getColNick(void) {
 }
 
 std::string Client::getNickUserHost(void) {
+//	return (_nickname + "!" + _username + "@" + _hostname);
 	return (_nickname + "!" + _username + "@" + _hostname);
+}
+
+std::string Client::getColHost(void) {
+	return (":" + _hostname);
 }
 
 bool Client::getIsRegistered() const

@@ -218,18 +218,31 @@ bool	Server::user(std::string &line, Client &c) {
 	std::getline(streamline, servername, ' ');
 	std::getline(streamline, dummy, ':');
 	std::getline(streamline, realname, '\0');
-//	std::cout << "Uname: " << username << " hostname: " << hostname << " servername: " << servername << " realname: " << realname << std::endl;
-	if (username.empty() || hostname.empty() || servername.empty() || realname.empty() ||
-		username.size() > 9 || hostname.size() > 9)
-		return (c.sendToClient(c.getColNick() + " 461 USER :Malformed parameters"), false);
+
+	if (!c.getIsPasswordValid() == false)
+		return (false);
+	if (c.getIsRegistered())
+		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
+	if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
+		return (c.sendToClient(c.getColNick() + " 461 USER :Not enough parameters"), false);
+	if (username.length() > 30 || hostname.length() > 63 || realname.length() > 128)
+		return (c.sendToClient(c.getColNick() + " 432 :Erroneous USER parameters"), false);
+	std::string illegal = " \r\n:";
+	if (username.find_first_of(illegal) != std::string::npos)
+		return (c.sendToClient(c.getColNick() + " 432 :Erroneous username"), false);
 
 	c.setUsername(username);
 	c.setHostname(hostname);
 	c.setServername(servername);
 	c.setRealname(realname);
-	c.setIsRegistered(true);
-
-	c.sendToClient(":" + servername + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + username + "@" + hostname);
-	return true;
+	c.setIsUserComplete(true);
+	std::cout << "Username set to: " << username << std::endl;
+	if (c.getIsNickValid() && !c.getIsRegistered())
+	{
+		c.setIsRegistered(true);
+		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		std::cout << "User registered: " << username << std::endl;
+		return (true);
+	}
+	return (false);
 }
-

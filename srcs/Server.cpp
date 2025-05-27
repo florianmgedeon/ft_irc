@@ -113,11 +113,12 @@ void Server::accept_client()
         throw std::runtime_error("accept() failed");
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
-    _clients.push_back(Client(hostname, &_pollfds[_nfds]));
+
     if (_nfds >= SOMAXCONN)
         throw std::runtime_error("Too many clients");
     _pollfds[_nfds].fd = client_fd;
     _pollfds[_nfds].events = POLLIN | POLLHUP;
+    _clients.push_back(Client(hostname, &_pollfds[_nfds]));
     _nfds++;
 }
 
@@ -150,15 +151,15 @@ bool Server::quit_client(int index)
 {
     int fd = _pollfds[index].fd;
 
-    if (getClient(fd) == _clients.end())
+    std::vector<Client>::iterator clientIt = getClient(fd);
+    if (clientIt == _clients.end())
         return false; // already removed
 
     for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
     {
-        if (it->second.isMember(_clients[fd].getNickname()))
+        if (it->second.isMember(clientIt->getNickname()))
         {
-            it->second.removeMember(&_clients[fd]);
-            //ft_send(fd, "Client disconnected"); //broadcast?
+            it->second.removeMember(&(*clientIt));
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else
@@ -168,7 +169,7 @@ bool Server::quit_client(int index)
             ++it;
     }
 
-    _clients.erase(getClient(fd));
+    _clients.erase(clientIt);
     close(fd);
 
     if (_nfds > 2)

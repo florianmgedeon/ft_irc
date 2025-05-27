@@ -26,10 +26,10 @@ bool Channel::addMember(Client *client, bool makeOp) {
 
 bool Channel::isMember(std::string nick) {return _members.find(nick) != _members.end();}
 
-void Channel::removeMember(Client *client) {
-	_members.erase(client->getNickname());
-	if (isOperator(client->getNickname()))
-		removeOperator(client);
+void Channel::removeMember(std::string nick) {
+	_members.erase(nick);
+	if (isOperator(nick))
+		removeOperator(nick);
 }
 
 //--------------------OPERATORS--------------------------
@@ -43,7 +43,7 @@ void Channel::addOperator(Client *client) {
 
 bool Channel::isOperator(std::string nick) {return _operators.find(nick) != _operators.end();}
 
-void Channel::removeOperator(Client *client) {_operators.erase(client->getNickname());}
+void Channel::removeOperator(std::string nick) {_operators.erase(nick);}
 
 //------------------------------------------------
 

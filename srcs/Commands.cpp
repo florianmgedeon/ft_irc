@@ -95,11 +95,7 @@ bool	Server::kick(std::string &line, Client &c) {
 	(void)line; (void)c;
 	return (true);
 }
-//TODO:list
-bool	Server::list(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
-}
+
 //TODO:mode
 bool	Server::mode(std::string &line, Client &c) {
 	(void)line; (void)c;
@@ -107,16 +103,14 @@ bool	Server::mode(std::string &line, Client &c) {
 }
 
 bool	Server::names(std::string &line, Client &c) {
-	std::cout << "line: |" << line << "|" << std::endl;
+//	std::cout << "line: |" << line << "|" << std::endl;
 	std::stringstream linestream;
 	std::string channelName, res = c.getColHost() + " 353 " + c.getNickname() + " = " + line + " :";
 	linestream << line;
 	int first = 0;
 	while (std::getline(linestream, channelName, ',')) {
-		if (first) {
+		if (first++)
 			res += ',';
-		}
-		first++;
 		res += _channels[channelName].memberlist();
 	}
 	c.sendToClient(res);
@@ -159,8 +153,29 @@ bool	Server::nick(std::string &line, Client &c) {
 }
 
 bool	Server::part(std::string &line, Client &c) {
-	(void)line; (void)c;
-	return (true);
+	if (!line.size())
+		return (c.sendToClient(c.getColNick() + " 461 PART :Not enough parameters"), false);
+	std::stringstream linestream;
+	std::string channelName, channels, reason;
+	
+	channels = line.substr(0, line.find(' '));
+	reason = line.substr(line.find(':') + 1);
+	std::cout << "line: |" << line << "|" << std::endl;
+	linestream << channels;
+	
+	while (std::getline(linestream, channelName, ',')) {
+		if (!channelExists(channelName))
+			c.sendToClient(c.getColNick() + " 403 :No such channel");
+		else if (!_channels[channelName].isMember(c.getNickname()))
+			c.sendToClient(c.getColNick() + " 442 " + channelName + " :You're not on that channel");
+		else {
+			std::cout << "removing " << c.getNickname() << " r sz " << reason.size() << std::endl;
+			_channels[channelName].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PART " + channelName + " :" + reason);
+			c.sendToClient(c.getNickUserHost() + " PART " + channelName + " :" + reason);
+			_channels[channelName].removeMember(c.getNickname());
+		}
+	}
+	return true;
 }
 
 int Server::getIndexofClient(int fd) {

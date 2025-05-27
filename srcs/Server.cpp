@@ -9,7 +9,6 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     _commandMap.insert(std::make_pair("INVITE ",	&Server::invite));
     _commandMap.insert(std::make_pair("JOIN ",		&Server::join));
     _commandMap.insert(std::make_pair("KICK ",		&Server::kick));
-	_commandMap.insert(std::make_pair("LIST ",		&Server::list));
     _commandMap.insert(std::make_pair("MODE ",		&Server::mode));
 	_commandMap.insert(std::make_pair("NAMES ",		&Server::names));
     _commandMap.insert(std::make_pair("NICK ",		&Server::nick));
@@ -163,7 +162,7 @@ bool Server::quit_client(int index)
     {
         if (it->second.isMember(clientIt->getNickname()))
         {
-            it->second.removeMember(&(*clientIt));
+            it->second.removeMember(clientIt->getNickname());
             if (it->second.isEmpty())
                 _channels.erase(it++);
             else

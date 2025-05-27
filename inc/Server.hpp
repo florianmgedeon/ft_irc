@@ -47,7 +47,6 @@ class Server
         bool		invite(std::string &line, Client &c);
         bool		join(std::string &line, Client &c);
         bool		kick(std::string &line, Client &c);
-        bool		list(std::string &line, Client &c);
         bool		mode(std::string &line, Client &c);
         bool		names(std::string &line, Client &c);
         bool		nick(std::string &line, Client &c);
@@ -62,6 +61,7 @@ class Server
         void		join_channel(std::string &channelName, Client &c, bool makeOp);
         int         getIndexofClient(int fd);
         bool		channelExists(std::string nick);
+
     public:
         Server(int port, std::string password);
         ~Server();
@@ -74,8 +74,9 @@ class Server
         std::vector<Client>::iterator getClient(const std::string nickname);
         int&		getClientFd(Client &c, int fd);
         void        start();
-        void        ft_socket();
 
+        //TODO: refactor to C++ camelCase instead of C under_scores
+        void        ft_socket();
         void        accept_client();
         bool        recv_client(int index);
         bool        quit_client(int index);

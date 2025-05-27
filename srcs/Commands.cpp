@@ -148,7 +148,7 @@ bool	Server::nick(std::string &line, Client &c) {
 	c.setIsNickValid(true);
 	for (size_t i = 0; i < _clients.size(); i++)
 		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
-	std::cout << "Nickname set to: " << line << std::endl;
+	// std::cout << "Nickname set to: " << line << std::endl;
 	if (c.getIsUserComplete() && !c.getIsRegistered())
 	{
 		c.setIsRegistered(true);
@@ -178,9 +178,7 @@ bool	Server::pass(std::string &line, Client &c) {
 	if (c.getIsRegistered())
 		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
 	if (line == this->getPassword())
-		{std::cout << "Password is valid: " << line << std::endl;
 		return (c.setIsPasswordValid(true), true);
-	}
 	else 
 	{
 		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
@@ -189,8 +187,11 @@ bool	Server::pass(std::string &line, Client &c) {
 	}
 }
 
-bool	Server::ping(std::string &line, Client &c) {
-	(void)line; (void)c;
+bool	Server::ping(std::string &line, Client &c)//for when server gets ping from client
+{
+	if (line.empty())
+		return (c.sendToClient(c.getColNick() + " 409 :No origin specified"), false);
+	c.sendToClient(":" + _serverName + " PONG " + line);
 	return (true);
 }
 
@@ -255,7 +256,7 @@ bool	Server::user(std::string &line, Client &c) {
 	std::getline(streamline, servername, ' ');
 	std::getline(streamline, dummy, ':');
 	std::getline(streamline, realname, '\0');
-	std::cout << "getIsPasswordValid: "<< c.getIsPasswordValid() << std::endl;
+	// std::cout << "getIsPasswordValid: "<< c.getIsPasswordValid() << std::endl;
 	if (c.getIsPasswordValid() == false)
 		return (false);
 	if (c.getIsRegistered())
@@ -273,7 +274,7 @@ bool	Server::user(std::string &line, Client &c) {
 	c.setServername(servername);
 	c.setRealname(realname);
 	c.setIsUserComplete(true);
-	std::cout << "Username set to: " << username << std::endl;
+	// std::cout << "Username set to: " << username << std::endl;
 	if (c.getIsNickValid() && !c.getIsRegistered())
 	{
 		c.setIsRegistered(true);

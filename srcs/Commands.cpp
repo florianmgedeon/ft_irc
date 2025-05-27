@@ -233,17 +233,22 @@ bool	Server::privmsg(std::string &line, Client &c) {
 }
 
 bool	Server::topic(std::string &line, Client &c) {
+	if (!line.size())
+		return (c.sendToClient(c.getColNick() + " 461 TOPIC :Not enough parameters"), false);
 	std::string channelName, newTopic;
-		channelName = line.substr(0, line.find(' '));
-	if (line.find(':') != std::string::npos) {	//set new topic
+	channelName = line.substr(0, line.find(' '));
+	if (!channelExists(channelName))
+		return (c.sendToClient(c.getColNick() + " 403 :No such channel"), false);
+	if (line.find(' ') != std::string::npos) {	//set new topic
+		if (!_channels[channelName].isOperator(c.getNickname()))
+			return (c.sendToClient(c.getColNick() + " 482 " + channelName + " :You're not channel operator"), false);
 		newTopic = line.substr(line.find(':') + 1);
-		std::cout << "chanName: |" << channelName << "| newTopic: |" << newTopic << "|" << std::endl;
-		if (_channels.find(line) == _channels.end()) {
-			return (c.sendToClient(c.getColNick() + " 401 :No such channel"), false);
-		}
+//		std::cout << "chanName: |" << channelName << "| newTopic: |" << newTopic << "|" << std::endl;
 		_channels[channelName].setTopic(newTopic);
-	} else if (_channels[line].hasTopic())	//send back topic if set
-		c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + line + " :" + _channels[line].getTopic());
+		c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
+	} else if (_channels[channelName].hasTopic()){	//send back topic if set
+		c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
+	}
 	return (true);
 }
 

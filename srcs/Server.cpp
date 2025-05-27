@@ -48,6 +48,10 @@ std::vector<Client>::iterator	Server::getClient(const std::string nickname) {
 	return i;
 }
 
+bool	Server::channelExists(std::string nick) {
+	return _channels.find(nick) == _channels.end() ? false : true;
+}
+
 //============================================ poll loop ====================================//
 
 void Server::handle_send(int index)

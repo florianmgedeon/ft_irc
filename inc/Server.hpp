@@ -1,7 +1,7 @@
 #pragma once
 
 #include <arpa/inet.h>
-// #include <bits/stdc++.h>
+#include <bits/stdc++.h>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -60,6 +60,8 @@ class Server
         bool		user(std::string &line, Client &c);
 
         void		join_channel(std::string &channelName, Client &c, bool makeOp);
+        int         getIndexofClient(int fd);
+        bool		channelExists(std::string nick);
     public:
         Server(int port, std::string password);
         ~Server();
@@ -78,6 +80,5 @@ class Server
         bool        recv_client(int index);
         bool        quit_client(int index);
         void        handle_send(int index);
-        int         getIndexofClient(int fd);
 
 };

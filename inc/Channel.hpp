@@ -9,10 +9,10 @@ class Client;
 class Channel
 {
     private:
-//        std::string         _name;
-        std::string         _topic;                  
-        std::string         _password;                
-        //int                 _userLimit;              
+        std::string         _topic, _topicSetter;
+        time_t				_topicTimestamp;
+        std::string         _password;
+        //int                 _userLimit;
         //bool                _inviteOnly;
         //bool                _topicRestricted;
         bool                _hasPassword;
@@ -39,7 +39,9 @@ class Channel
         bool checkPassword(std::string in);
 
         const std::string& getTopic() const;
-		void setTopic(const std::string &topic);
-		bool hasTopic();
 		std::string	memberlist();
+		void setTopic(const std::string &topic, const std::string &setter);
+		bool hasTopic();
+		std::string getTopicTimestamp() const;
+		const std::string& getTopicSetter() const;
 };

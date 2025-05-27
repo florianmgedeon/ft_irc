@@ -1,10 +1,16 @@
 #include "../inc/Channel.hpp"
 
-Channel::Channel(){_hasPassword = false;}
+Channel::Channel() {
+	_hasPassword = false;
+	_topicTimestamp = 0;
+}
 
 Channel::~Channel(){}
 
-Channel::Channel(std::string pwd): _password(pwd) {_hasPassword = true;}
+Channel::Channel(std::string pwd): _password(pwd) {
+	_hasPassword = true;
+	_topicTimestamp = 0;
+}
 
 //----------------------MEMBERS----------------------------
 
@@ -31,7 +37,7 @@ void Channel::removeMember(Client *client) {
 void Channel::addOperator(Client *client) {
 	if (isMember(client->getNickname()) && !isOperator(client->getNickname())) {
 		_operators.insert(std::make_pair(client->getNickname(), client));
-		std::cout << "added " << client->getNickname() << " to ops" << std::endl;
+//		std::cout << "added " << client->getNickname() << " to ops" << std::endl;
 	}
 }
 
@@ -55,12 +61,6 @@ bool	Channel::isMemberBanned(std::string &nick) {return _banlist.find(nick) != _
 
 bool	Channel::checkPassword(std::string in) {return in == _password ? true : false;}
 
-const std::string&	Channel::getTopic() const {return _topic;}
-
-void	Channel::setTopic(const std::string &topic) {_topic = topic;}
-
-bool	Channel::hasTopic() {return _topic.size() == 0 ? false : true;}
-
 std::string	Channel::memberlist() {
 	std::string res;
 	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); it++) {
@@ -68,4 +68,24 @@ std::string	Channel::memberlist() {
 		res = res + it->first + " ";
 	}
 	return res;
+}
+
+const std::string&	Channel::getTopic() const {return _topic;}
+
+void	Channel::setTopic(const std::string &topic, const std::string &setter) {
+	_topic = topic;
+	_topicTimestamp = std::time(0);
+	_topicSetter = setter;
+}
+
+bool	Channel::hasTopic() {return _topic.size() == 0 ? false : true;}
+
+std::string Channel::getTopicTimestamp() const {
+	std::ostringstream res;
+	res << _topicTimestamp;
+	return res.str();
+}
+
+const std::string& Channel::getTopicSetter() const {
+	return _topicSetter;
 }

@@ -61,7 +61,6 @@ std::string Client::getColNick(void) {
 }
 
 std::string Client::getNickUserHost(void) {
-//	return (_nickname + "!" + _username + "@" + _hostname);
 	return (_nickname + "!" + _username + "@" + _hostname);
 }
 

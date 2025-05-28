@@ -12,6 +12,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     _commandMap.insert(std::make_pair("MODE ",		&Server::mode));
 	_commandMap.insert(std::make_pair("NAMES ",		&Server::names));
     _commandMap.insert(std::make_pair("NICK ",		&Server::nick));
+    _commandMap.insert(std::make_pair("NOTICE ",	&Server::notice));
 	_commandMap.insert(std::make_pair("PART ",		&Server::part));
     _commandMap.insert(std::make_pair("PASS ",		&Server::pass));
     _commandMap.insert(std::make_pair("PING ",		&Server::ping));
@@ -19,6 +20,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
     _commandMap.insert(std::make_pair("PRIVMSG ",	&Server::privmsg));
 	_commandMap.insert(std::make_pair("TOPIC ",		&Server::topic));
     _commandMap.insert(std::make_pair("USER ",		&Server::user));
+    _commandMap.insert(std::make_pair("QUIT ",		&Server::quit));
 }
 
 Server::~Server() {}
@@ -152,28 +154,27 @@ bool Server::recv_client(int index)
 
 bool Server::quit_client(int index)
 {
-    int fd = _pollfds[index].fd;
-
-    std::vector<Client>::iterator clientIt = getClient(fd);
-    if (clientIt == _clients.end())
-        return false; // already removed
-
-    for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
-    {
-        if (it->second.isMember(clientIt->getNickname()))
-        {
-            it->second.removeMember(clientIt->getNickname());
-            if (it->second.isEmpty())
-                _channels.erase(it++);
-            else
-                ++it;
-        }
-        else
-            ++it;
-    }
-
-    _clients.erase(clientIt);
-    close(fd);
+//    int fd = _pollfds[index].fd;
+//
+    std::vector<Client>::iterator clientIt = getClient(_pollfds[index].fd);
+//    if (clientIt == _clients.end())
+//        return false; // already removed
+//
+//    for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
+//    {
+//        if (it->second.isMember(clientIt->getNickname()))
+//        {
+//            it->second.removeMember(clientIt->getNickname());
+//            if (it->second.isEmpty())
+//                _channels.erase(it++);
+//            else
+//                ++it;
+//        }
+//        else
+//            ++it;
+//    }
+//
+    close(_pollfds[index].fd);
 
     if (_nfds > 2)
     {
@@ -188,6 +189,7 @@ bool Server::quit_client(int index)
     }
 
     _nfds--;
+    _clients.erase(clientIt);
     std::cout << "Client disconnected" << std::endl;
     return true;
 }

@@ -1,5 +1,6 @@
 #include "../inc/Server.hpp"
 typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator commandIter;
+typedef std::map<std::string, Channel>::iterator channelIter;
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
@@ -39,7 +40,7 @@ bool	Server::cap(std::string &line, Client &c) {
 //TODO: invite
 bool	Server::invite(std::string &line, Client &c) {
 	(void)line; (void)c;
-	return (true);
+	return true;
 }
 
 void	Server::join_channel(std::string &channelName, Client &c, bool makeOp) {
@@ -88,18 +89,18 @@ bool	Server::join(std::string &line, Client &c) {
 		}
 	}
 
-	return (true);
+	return true;
 }
 //TODO:kick
 bool	Server::kick(std::string &line, Client &c) {
 	(void)line; (void)c;
-	return (true);
+	return true;
 }
 
 //TODO:mode
 bool	Server::mode(std::string &line, Client &c) {
 	(void)line; (void)c;
-	return (true);
+	return true;
 }
 
 bool	Server::names(std::string &line, Client &c) {
@@ -149,6 +150,11 @@ bool	Server::nick(std::string &line, Client &c) {
 		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
 		std::cout << "User registered: " << c.getUsername() << std::endl;
 	}
+	return true;
+}
+
+bool	Server::notice(std::string &line, Client &c) {
+	(void)line; (void)c;
 	return true;
 }
 
@@ -307,4 +313,15 @@ bool	Server::user(std::string &line, Client &c) {
 		return (true);
 	}
 	return (false);
+}
+
+bool	Server::quit(std::string &line, Client &c) {
+	c.sendToClient(c.getColNick() + " QUIT " + line);
+	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
+		if (it->second.isMember(it->first)) {
+			std::string call = (*it).first + " " + line.substr(1);
+			part(call, c);
+		}
+//	_clients.erase(getClient(c.getNickname()));
+	return true;
 }

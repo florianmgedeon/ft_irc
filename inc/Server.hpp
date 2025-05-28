@@ -50,6 +50,7 @@ class Server
         bool		mode(std::string &line, Client &c);
         bool		names(std::string &line, Client &c);
         bool		nick(std::string &line, Client &c);
+        bool		notice(std::string &line, Client &c);
         bool		part(std::string &line, Client &c);
         bool		pass(std::string &line, Client &c);
         bool		ping(std::string &line, Client &c);
@@ -57,6 +58,7 @@ class Server
         bool		privmsg(std::string &line, Client &c);
         bool		topic(std::string &line, Client &c);
         bool		user(std::string &line, Client &c);
+        bool		quit(std::string &line, Client &c);
 
         void		join_channel(std::string &channelName, Client &c, bool makeOp);
         int         getIndexofClient(int fd);

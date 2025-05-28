@@ -17,11 +17,19 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
 		} else {
 			Client c = *getClient(fd);
-			c.sendToClient(c.getColNick() + " "+ find + " :Unknown command");
-//			return false;
+			c.sendToClient(c.getColNick() + " " + find + " :Unknown command");
 		}
 	}
 	return true;
+}
+
+std::string	cutFirstWord(std::string &line) {
+	std::string res;
+	if (line.find(' ')) {
+		res = line.substr(0, line.find(' '));
+		line = line.substr(line.find(' ') + 1);
+	}
+	return res;
 }
 
 //---------------------------COMMANDS------------------------------------------
@@ -64,11 +72,11 @@ bool	Server::join(std::string &line, Client &c) {
 		if (_channels.find(readName) == _channels.end()) {	//create channel
 			if (readName[0] == '&') {	//create pw-locked channel
 				std::getline(pwdstream, readPwd, ',');
-				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
+//				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(readPwd)));
 				join_channel(readName, c, true);
 			} else if (readName[0] == '#') {	//create open chanel
-				std::cout << "creating open channel " << readName << std::endl;
+//				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel()));
 				join_channel(readName, c, true);
 			} else return (c.sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
@@ -88,12 +96,29 @@ bool	Server::join(std::string &line, Client &c) {
 			}
 		}
 	}
-
 	return true;
 }
-//TODO:kick
+
 bool	Server::kick(std::string &line, Client &c) {
-	(void)line; (void)c;
+	if (!line.size())
+		return (c.sendToClient(c.getColNick() + " 461 KICK :Not enough parameters"), false);
+	std::string channel = cutFirstWord(line);
+	if (!channelExists(channel))
+		return (c.sendToClient(c.getColNick() + " 403 :No such channel"), false);
+	std::string user = cutFirstWord(line);
+	if (!(_channels[channel].isMember(user)))
+		return (c.sendToClient(c.getColNick() + " 441 " + user + " " + channel + " :They aren't on that channel"), false);
+	if (!(_channels[channel].isMember(c.getNickname())))
+		return (c.sendToClient(c.getColNick() + " 442 " + channel + " :You're not on that channel"), false);
+	if (!(_channels[channel].isOperator(c.getNickname())))
+		return (c.sendToClient(c.getColNick() + " 482 " + channel + " :You're not channel operator"), false);
+	std::string reason = line.substr(line.find_last_of(':') + 1);
+
+	getClient(user)->sendToClient(":" + c.getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
+	_channels[channel].removeMember(user);
+	_channels[channel].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " KICK " + channel + " " + user);
+//	for (std::map<std::string, Client *>::iterator it = _channels[channel]._members.begin(); it != _channels[channel]._members.end(); ++it)
+//		names(channel, *(it).second);
 	return true;
 }
 
@@ -164,8 +189,8 @@ bool	Server::part(std::string &line, Client &c) {
 	std::stringstream linestream;
 	std::string channelName, channels, reason;
 	
-	channels = line.substr(0, line.find(' '));
-	reason = line.substr(line.find(':') + 1);
+	channels = cutFirstWord(line);
+	reason = line.substr(line.find_last_of(':') + 1);
 	std::cout << "line: |" << line << "|" << std::endl;
 	linestream << channels;
 	
@@ -179,6 +204,8 @@ bool	Server::part(std::string &line, Client &c) {
 			_channels[channelName].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PART " + channelName + " :" + reason);
 			c.sendToClient(c.getNickUserHost() + " PART " + channelName + " :" + reason);
 			_channels[channelName].removeMember(c.getNickname());
+			if (_channels[channelName].isEmpty())
+				_channels.erase(channelName);
 		}
 	}
 	return true;
@@ -247,7 +274,8 @@ bool	Server::privmsg(std::string &line, Client &c) {
 			if (recp == _clients.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such nick"), false);
 			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
-			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
+//			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
+			(*recp).sendToClient(":" + c.getNickUserHost() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
 		}
 	}
 	return true;

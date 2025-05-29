@@ -53,7 +53,8 @@ bool	Server::invite(std::string &line, Client &c) {
 
 void	Server::join_channel(std::string &channelName, Client &c, bool makeOp) {
 	_channels[channelName].addMember(&c, makeOp);
-	_channels[channelName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + channelName);
+//	_channels[channelName].sendChannelMessage(c.getNickname(), c.getColNick() + " JOIN " + channelName);
+	_channels[channelName].sendChannelMessage(c.getNickUserHost(), c.getColNick() + " JOIN " + channelName);
 	topic(channelName, c);
 	names(channelName, c);
 }
@@ -114,9 +115,9 @@ bool	Server::kick(std::string &line, Client &c) {
 		return (c.sendToClient(c.getColNick() + " 482 " + channel + " :You're not channel operator"), false);
 	std::string reason = line.substr(line.find_last_of(':') + 1);
 
-	getClient(user)->sendToClient(":" + c.getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
+	getClient(user)->sendToClient(c.getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
 	_channels[channel].removeMember(user);
-	_channels[channel].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " KICK " + channel + " " + user);
+	_channels[channel].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " KICK " + channel + " " + user);
 //	for (std::map<std::string, Client *>::iterator it = _channels[channel]._members.begin(); it != _channels[channel]._members.end(); ++it)
 //		names(channel, *(it).second);
 	return true;
@@ -151,12 +152,12 @@ bool	Server::nick(std::string &line, Client &c) {
 		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
 
 	const std::string specials = "[]\\`_^{|}";
-	if (line.length() > 30 || (!isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
+	if (line.length() > 30 || (!std::isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
     for (size_t j = 1; j < line.length(); ++j)
     {
         char x = line[j];
-        if (!isalnum(x) && specials.find(x) == std::string::npos)
+        if (!std::isalnum(x) && specials.find(x) == std::string::npos)
 			return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
     }
     if (line.find_first_of("0123456789") != std::string::npos && line.find_first_not_of("0123456789") == std::string::npos)
@@ -201,7 +202,7 @@ bool	Server::part(std::string &line, Client &c) {
 			c.sendToClient(c.getColNick() + " 442 " + channelName + " :You're not on that channel");
 		else {
 			std::cout << "removing " << c.getNickname() << " r sz " << reason.size() << std::endl;
-			_channels[channelName].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PART " + channelName + " :" + reason);
+			_channels[channelName].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PART " + channelName);
 			c.sendToClient(c.getNickUserHost() + " PART " + channelName + " :" + reason);
 			_channels[channelName].removeMember(c.getNickname());
 			if (_channels[channelName].isEmpty())
@@ -268,14 +269,13 @@ bool	Server::privmsg(std::string &line, Client &c) {
 		if (toChannel) {
 			if (_channels.find(line) == _channels.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such channel"), false);
-			_channels[line].sendChannelMessage(c.getNickname(), ":" + c.getNickUserHost() + " PRIVMSG " + line + " :" + msg);
+			_channels[line].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PRIVMSG " + line + " :" + msg);
 		} else {
 			std::vector<Client>::iterator recp = getClient(line);
 			if (recp == _clients.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such nick"), false);
 			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
-//			(*recp).sendToClient(c.getColNick() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
-			(*recp).sendToClient(":" + c.getNickUserHost() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
+			(*recp).sendToClient(c.getNickUserHost() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
 		}
 	}
 	return true;

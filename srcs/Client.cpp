@@ -8,6 +8,8 @@ Client::Client()
     _isPasswordValid = false;
     _isRegistered = false;
     _pfd = NULL;
+	_isUserComplete = false;
+	_isNickValid = false;
 }
 
 Client::~Client()
@@ -22,6 +24,8 @@ Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pf
     _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
+	_isUserComplete = false;
+	_isNickValid = false;
 }
 
 int Client::getFd() const
@@ -37,7 +41,6 @@ void Client::setWrite(bool write)
 
 void Client::sendToClient(std::string message)
 {
-	// std::cout << "send to " << this->_nickname << " <" << message << ">" << std::endl;
     send_buffer += message + "\r\n";
     setWrite(true);
 }
@@ -62,7 +65,7 @@ std::string Client::getColNick(void) {
 }
 
 std::string Client::getNickUserHost(void) {
-	return (_nickname + "!" + _username + "@" + _hostname);
+	return (":" + _nickname + "!" + _username + "@" + _hostname);
 }
 
 std::string Client::getColHost(void) {

@@ -154,26 +154,7 @@ bool Server::recv_client(int index)
 
 bool Server::quit_client(int index)
 {
-//    int fd = _pollfds[index].fd;
-//
     std::vector<Client>::iterator clientIt = getClient(_pollfds[index].fd);
-//    if (clientIt == _clients.end())
-//        return false; // already removed
-//
-//    for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); )
-//    {
-//        if (it->second.isMember(clientIt->getNickname()))
-//        {
-//            it->second.removeMember(clientIt->getNickname());
-//            if (it->second.isEmpty())
-//                _channels.erase(it++);
-//            else
-//                ++it;
-//        }
-//        else
-//            ++it;
-//    }
-//
     close(_pollfds[index].fd);
 
     if (_nfds > 2)

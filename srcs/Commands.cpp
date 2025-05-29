@@ -344,12 +344,12 @@ bool	Server::user(std::string &line, Client &c) {
 }
 
 bool	Server::quit(std::string &line, Client &c) {
-	c.sendToClient(c.getColNick() + " QUIT " + line);
+	// c.sendToClient(c.getColNick() + " QUIT " + line);
 	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
 		if (it->second.isMember(it->first)) {
 			std::string call = (*it).first + " " + line.substr(1);
 			part(call, c);
 		}
-//	_clients.erase(getClient(c.getNickname()));
+	quit_client(getIndexofClient(c.getFd()));
 	return true;
 }

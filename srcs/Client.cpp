@@ -12,6 +12,7 @@ Client::Client()
 
 Client::~Client()
 {
+    std::cout << "Client destructor called for " << _nickname << std::endl;
 }
 
 Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)

@@ -292,10 +292,9 @@ bool	Server::topic(std::string &line, Client &c) {
 		if (!_channels[channelName].isOperator(c.getNickname()))
 			return (c.sendToClient(c.getColNick() + " 482 " + channelName + " :You're not channel operator"), false);
 		newTopic = line.substr(line.find_last_of(':') + 1);
-//		std::cout << "chanName: |" << channelName << "| newTopic: |" << newTopic << "|" << std::endl;
 		_channels[channelName].setTopic(newTopic, c.getNickname());
-		c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
-		c.sendToClient(c.getColHost() + " 333 " + c.getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
+		_channels[channelName].sendChannelMessage("", c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
+		_channels[channelName].sendChannelMessage("", c.getColHost() + " 333 " + c.getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
 	} else {
 		if (_channels[channelName].hasTopic()) {	//send back topic if set
 			c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());

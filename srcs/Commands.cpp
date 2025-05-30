@@ -229,7 +229,9 @@ bool	Server::pass(std::string &line, Client &c) {
 	else 
 	{
 		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
-		quit_client(getIndexofClient(c.getFd()));
+		std::string x = "";
+		std::cout << "pass-quit" << std::endl;
+		quit(x, c);
 		return (false);
 	}
 }
@@ -342,13 +344,14 @@ bool	Server::user(std::string &line, Client &c) {
 	return (false);
 }
 
-bool	Server::quit(std::string &line, Client &c) {
-	// c.sendToClient(c.getColNick() + " QUIT " + line);
+bool	Server::quit(std::string &line, Client &c)
+{
 	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
-		if (it->second.isMember(it->first)) {
+		if (it->second.isMember(it->first))
+		{
 			std::string call = (*it).first + " " + line.substr(1);
 			part(call, c);
 		}
-	quit_client(getIndexofClient(c.getFd()));
+	quit_client(c.getFd());
 	return true;
 }

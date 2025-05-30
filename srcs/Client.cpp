@@ -3,11 +3,10 @@
 Client::Client()
 {
 	_nickname = _username = _realname = _hostname = _servername = "*";
-    _write_ready = false;
+    // _write_ready = false;
     _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
-    _pfd = NULL;
 	_isUserComplete = false;
 	_isNickValid = false;
 }
@@ -17,10 +16,11 @@ Client::~Client()
     std::cout << "Client destructor called for " << _nickname << std::endl;
 }
 
-Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)
+// Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)
+Client::Client(std::string hostname, struct epoll_event _ev) : _hostname(hostname), _ev(_ev)
 {
 	_nickname = _username = _realname = _servername = "*";
-    _write_ready = false;
+    // _write_ready = false;
     _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
@@ -30,19 +30,31 @@ Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pf
 
 int Client::getFd() const
 {
-    return _pfd->fd;
+    return _ev.data.fd;
 }
 
-void Client::setWrite(bool write)
-{
-    _write_ready = write;
-    _pfd->events |= POLLOUT;
-}
+// void Client::setWrite(bool write)
+// {
+//     // _write_ready = write;
+//     //NOT NEEDED ANYMORE BECUASE OF EPOLLET at the start:
+//     // if (write == true)
+//     // {
+//     //     _ev.events |= EPOLLOUT;
+//     //     if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
+//     //         throw std::runtime_error("epoll_ctl(MOD) failed");
+//     // }
+//     // else
+//     // {
+//     //     _ev.events = EPOLLIN | EPOLLET | EPOLLHUP;
+//     //     if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
+//     //         throw std::runtime_error("epoll_ctl(MOD) failed");
+//     // }
+// }
 
 void Client::sendToClient(std::string message)
 {
     send_buffer += message + "\r\n";
-    setWrite(true);
+    // setWrite(true);
 }
 
 void Client::recvFromClient(char *buffer)

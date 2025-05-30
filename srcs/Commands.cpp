@@ -1,6 +1,13 @@
 #include "../inc/Server.hpp"
 typedef std::map<std::string, bool(Server::*)(std::string&, Client&)>::iterator commandIter;
 typedef std::map<std::string, Channel>::iterator channelIter;
+//TODO: INVITE OPER MODE
+
+
+//rest commands die net zu operator ghörn
+//ACTION: wird vom client interpretiert und is parameter von privmsg -> funktioniert
+//NOTICE: ka command sondern message die bots für kommunikation verwenden statt privmsg, brauch ma am end net bzw. nur fürn bonus?
+//TIME: nice to have
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
@@ -61,14 +68,11 @@ void	Server::join_channel(std::string &channelName, Client &c, bool makeOp) {
 
 bool	Server::join(std::string &line, Client &c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
-	std::string pwds, readName, readPwd;
+	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
-	if (line.find(' ') != std::string::npos) {
-		pwds = line.substr(line.find(' '));
-		line = line.substr(0, line.find(' '));
-		pwdstream << pwds;
-	}
-	chanNamestream << line;
+	chanNamestream << cutFirstWord(line);
+	pwdstream << line;
+
 	while (std::getline(chanNamestream, readName, ',')) {
 		if (_channels.find(readName) == _channels.end()) {	//create channel
 			if (readName[0] == '&') {	//create pw-locked channel
@@ -83,18 +87,14 @@ bool	Server::join(std::string &line, Client &c) {
 			} else return (c.sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
 
 		} else {	//try joining existing channel
-			if (_channels[readName].isMemberBanned(c.getNickname())) {
+			if (_channels[readName].isMemberBanned(c.getNickname()))
 				return (c.sendToClient(c.getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
-			} else if (readName[0] == '&') {	//join pw-locked channel
+			else if (readName[0] == '&') {	//join pw-locked channel
 				std::getline(pwdstream, readPwd, ',');
-				if (!(_channels[readName].checkPassword(readPwd)))
+				if (!(_channels[readName].checkPassword(readPwd)))	//BUG: irssi macht leeres chatfenster auf
 					return (c.sendToClient(c.getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
-				else {
-					join_channel(readName, c, false);
-				}
-			} else if (readName[0] == '#') {	//join open channel
-				join_channel(readName, c, false);
-			}
+				else join_channel(readName, c, false);
+			} else if (readName[0] == '#') join_channel(readName, c, false);	//join open channel
 		}
 	}
 	return true;
@@ -118,8 +118,6 @@ bool	Server::kick(std::string &line, Client &c) {
 	getClient(user)->sendToClient(c.getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
 	_channels[channel].removeMember(user);
 	_channels[channel].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " KICK " + channel + " " + user);
-//	for (std::map<std::string, Client *>::iterator it = _channels[channel]._members.begin(); it != _channels[channel]._members.end(); ++it)
-//		names(channel, *(it).second);
 	return true;
 }
 
@@ -132,14 +130,10 @@ bool	Server::mode(std::string &line, Client &c) {
 bool	Server::names(std::string &line, Client &c) {
 //	std::cout << "line: |" << line << "|" << std::endl;
 	std::stringstream linestream;
-	std::string channelName, res = c.getColHost() + " 353 " + c.getNickname() + " = " + line + " :";
+	std::string channelName, res;
 	linestream << line;
-	int first = 0;
-	while (std::getline(linestream, channelName, ',')) {
-		if (first++)
-			res += ',';
-		res += _channels[channelName].memberlist();
-	}
+	while (std::getline(linestream, channelName, ','))
+		res += c.getColHost() + " 353 " + c.getNickname() + " = " + line + " :" + _channels[channelName].memberlist();
 	c.sendToClient(res);
 	c.sendToClient(c.getColHost() + " 366 " + c.getNickname() + " " + channelName + " :End of NAMES list");
 	return true;
@@ -250,31 +244,32 @@ bool	Server::pong(std::string &line, Client &c) {
 }
 
 bool	Server::privmsg(std::string &line, Client &c) {
-	std::cout << "line; |" << line << "|" << std::endl;
-	std::string msg = line.substr(line.find(':') + 1);
+//	std::cout << "msg: |" << line << "|" << std::endl;
+	std::stringstream namestream; namestream << cutFirstWord(line);
+	std::string username, msg = line.substr(line.find_last_of(':') + 1);
 	if (!msg.size())
 		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
 	line = line.substr(0, line.find(':') - 1);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
-	bool toChannel = false;
 
-	{//TODO: parse name parameter along commas for several recipients
-		while (strchr("@%", line[0])) {
-			if (line[0] == '@') line = line.substr(1); //TODO: send to channel ops
-			else if (line[0] == '%') line = line.substr(1); //TODO: send to channel ops
+	while (std::getline(namestream, username, ',')) {
+		bool toChannel = false;
+		while (strchr("@%", username[0])) {
+			if (username[0] == '@') username = username.substr(1); //TODO: send to channel ops
+			else if (username[0] == '%') username = username.substr(1); //TODO: send to channel ops
 		}
-		if (line[0] == '#' || line[0] == '&')
+		if (username[0] == '#' || username[0] == '&')
 				toChannel = true;
 		if (toChannel) {
-			if (_channels.find(line) == _channels.end())
+			if (_channels.find(username) == _channels.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such channel"), false);
-			_channels[line].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PRIVMSG " + line + " :" + msg);
+			_channels[username].sendChannelMessage(c.getNickname(), c.getNickUserHost() + " PRIVMSG " + username + " :" + msg);
 		} else {
-			std::vector<Client>::iterator recp = getClient(line);
+			std::vector<Client>::iterator recp = getClient(username);
 			if (recp == _clients.end())
 				return (c.sendToClient(c.getColNick() + " 401 :No such nick"), false);
-			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
+//			std::cout << c.getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
 			(*recp).sendToClient(c.getNickUserHost() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
 		}
 	}

@@ -9,6 +9,17 @@ typedef std::map<std::string, Channel>::iterator channelIter;
 //NOTICE: ka command sondern message die bots für kommunikation verwenden statt privmsg, brauch ma am end net bzw. nur fürn bonus?
 //TIME: nice to have
 
+std::string	tokenize(std::string &line, char c) {
+	std::string res;
+	if (line.find(' ')) {
+		res = line.substr(0, line.find(c));
+		line = line.substr(line.find(c) + 1);
+	}
+	return res;
+}
+
+std::string	strPastColon(std::string &line) {return line.substr(line.find(':') + 1);}
+
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
 	std::stringstream streamline;
@@ -16,39 +27,33 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 //	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
-		std::string find = line.substr(0, line.find(" ") + 1) ;
-		transform(find.begin(), find.end(), find.begin(), ::toupper);
-		commandIter comMapIt = _commandMap.find(find);	//find upcased command string in command map
-		if (comMapIt != _commandMap.end()) {
-			line = line.substr(comMapIt->first.size());	//advance line string by cmd size
-			/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
-		} else {
-			Client c = *getClient(fd);
-			c.sendToClient(c.getColNick() + " " + find + " :Unknown command");
+		if (!dummy.size()) {
+			std::string cmd = tokenize(line, ' ');
+			transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
+			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
+			if (comMapIt != _commandMap.end())
+				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
+			else {
+				Client c = *getClient(fd);
+				c.sendToClient(c.getColNick() + " " + cmd + " :Unknown command");
+			}
 		}
 	}
 	return true;
 }
 
-std::string	cutFirstWord(std::string &line) {
-	std::string res;
-	if (line.find(' ')) {
-		res = line.substr(0, line.find(' '));
-		line = line.substr(line.find(' ') + 1);
-	}
-	return res;
-}
 
 //---------------------------COMMANDS------------------------------------------
 
 bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
-	if (line.substr(0, 2) == "LS")
+	std::string param = tokenize(line, ' ');
+	if (param == "LS")
 		return (c.setCapNegotiation(true), c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
-//	if (line.substr(0, 4).compare ("LIST"))
-	if (line.substr(0, 4) == "REQ ")//TODO: parse and actually do request
+//	if (param == "LIST")
+	if (param == "REQ")//TODO: parse and actually do request
 		return (c.sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
-	if (line.substr(0, 3) == "END")
+	if (param == "END")
 		return (true);
 	return false;
 }
@@ -70,7 +75,7 @@ bool	Server::join(std::string &line, Client &c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
-	chanNamestream << cutFirstWord(line);
+	chanNamestream << tokenize(line, ' ');
 	pwdstream << line;
 
 	while (std::getline(chanNamestream, readName, ',')) {
@@ -103,17 +108,17 @@ bool	Server::join(std::string &line, Client &c) {
 bool	Server::kick(std::string &line, Client &c) {
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 461 KICK :Not enough parameters"), false);
-	std::string channel = cutFirstWord(line);
+	std::string channel = tokenize(line, ' ');
 	if (!channelExists(channel))
 		return (c.sendToClient(c.getColNick() + " 403 :No such channel"), false);
-	std::string user = cutFirstWord(line);
+	std::string user = tokenize(line, ' ');
 	if (!(_channels[channel].isMember(user)))
 		return (c.sendToClient(c.getColNick() + " 441 " + user + " " + channel + " :They aren't on that channel"), false);
 	if (!(_channels[channel].isMember(c.getNickname())))
 		return (c.sendToClient(c.getColNick() + " 442 " + channel + " :You're not on that channel"), false);
 	if (!(_channels[channel].isOperator(c.getNickname())))
 		return (c.sendToClient(c.getColNick() + " 482 " + channel + " :You're not channel operator"), false);
-	std::string reason = line.substr(line.find_last_of(':') + 1);
+	std::string reason = strPastColon(line);
 
 	getClient(user)->sendToClient(c.getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
 	_channels[channel].removeMember(user);
@@ -164,11 +169,10 @@ bool	Server::nick(std::string &line, Client &c) {
 	for (size_t i = 0; i < _clients.size(); i++)
 		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
 	// std::cout << "Nickname set to: " << line << std::endl;
-	if (c.getIsUserComplete() && !c.getIsRegistered())
-	{
+	if (c.getIsUserComplete() && !c.getIsRegistered()) {
 		c.setIsRegistered(true);
 		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
-		std::cout << "User registered: " << c.getUsername() << std::endl;
+//		std::cout << "User registered: " << c.getNickname() << std::endl;
 	}
 	return true;
 }
@@ -184,9 +188,9 @@ bool	Server::part(std::string &line, Client &c) {
 	std::stringstream linestream;
 	std::string channelName, channels, reason;
 	
-	channels = cutFirstWord(line);
-	reason = line.substr(line.find_last_of(':') + 1);
-	std::cout << "line: |" << line << "|" << std::endl;
+	channels = tokenize(line, ' ');
+	reason = strPastColon(line);
+//	std::cout << "line: |" << line << "|" << std::endl;
 	linestream << channels;
 	
 	while (std::getline(linestream, channelName, ',')) {
@@ -245,14 +249,16 @@ bool	Server::pong(std::string &line, Client &c) {
 
 bool	Server::privmsg(std::string &line, Client &c) {
 //	std::cout << "msg: |" << line << "|" << std::endl;
-	std::stringstream namestream; namestream << cutFirstWord(line);
-	std::string username, msg = line.substr(line.find_last_of(':') + 1);
+	std::stringstream namestream;
+	std::string username, users, msg;
+	users =  tokenize(line, ' ');
+	if (!users.size())
+		return (c.sendToClient(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
+	msg = strPastColon(line);
 	if (!msg.size())
 		return (c.sendToClient(c.getColNick() + " 412 :No text to send"), false);
-	line = line.substr(0, line.find(':') - 1);
-	if (!line.size())
-		return (c.sendToClient(c.getColNick() + " 411 :No recipient given (PRIVMSG)"), false);
 
+	namestream << users;
 	while (std::getline(namestream, username, ',')) {
 		bool toChannel = false;
 		while (strchr("@%", username[0])) {
@@ -279,19 +285,18 @@ bool	Server::privmsg(std::string &line, Client &c) {
 bool	Server::topic(std::string &line, Client &c) {
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 461 TOPIC :Not enough parameters"), false);
-	std::string channelName, newTopic;
-	channelName = line.substr(0, line.find(' '));
+	std::string channelName = tokenize(line, ' ');
 	if (!channelExists(channelName))
 		return (c.sendToClient(c.getColNick() + " 403 :No such channel"), false);
 	if (line.find(' ') != std::string::npos) {	//set new topic
 		if (!_channels[channelName].isOperator(c.getNickname()))
 			return (c.sendToClient(c.getColNick() + " 482 " + channelName + " :You're not channel operator"), false);
-		newTopic = line.substr(line.find_last_of(':') + 1);
-		_channels[channelName].setTopic(newTopic, c.getNickname());
+		line = strPastColon(line);
+		_channels[channelName].setTopic(line, c.getNickname());
 		_channels[channelName].sendChannelMessage("", c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
 		_channels[channelName].sendChannelMessage("", c.getColHost() + " 333 " + c.getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
-	} else {
-		if (_channels[channelName].hasTopic()) {	//send back topic if set
+	} else {									//send back topic if set - maybe this isn't needed for implementation for irssi since the client
+		if (_channels[channelName].hasTopic()) {//never asks for a set topic but returns the internal one from join or last topic change
 			c.sendToClient(c.getColHost() + " 332 " + c.getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
 			c.sendToClient(c.getColHost() + " 333 " + c.getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
 		} else c.sendToClient(c.getColHost() + " 331 :No topic");

@@ -85,7 +85,7 @@ class Server
         void        ft_socket();
         void        accept_client();
         // bool        recv_client(int index);
-        void        recv_client(int client_fd, bool &does_quit);
+        void        recv_client(int client_fd);
         void        quit_client(int client_fd);
         void        handle_send(int client_fd);
 };

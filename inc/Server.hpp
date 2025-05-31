@@ -88,4 +88,5 @@ class Server
         void        recv_client(int client_fd);
         void        quit_client(int client_fd);
         void        handle_send(int client_fd);
+        bool        hasClient(int fd);
 };

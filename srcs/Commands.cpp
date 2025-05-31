@@ -20,13 +20,14 @@ std::string	tokenize(std::string &line, char c) {
 
 std::string	strPastColon(std::string &line) {return line.substr(line.find(':') + 1);}
 
-bool	Server::parseClientInput(int fd, std::string buffer) {
+bool	Server::parseClientInput(int fd, std::string buffer) {//check if 1 total command is >512
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
 //	Client c = *getClient(fd);
 //	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
+		std::cout << "line from client: " << line << std::endl;
 		std::getline(streamline, dummy, '\n');
 		if (!dummy.size()) {
 			std::string cmd = tokenize(line, ' ');
@@ -35,7 +36,8 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			if (comMapIt != _commandMap.end())
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
 			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
-			getClient(fd)->sendOff();
+			if (cmd != "QUIT")
+				getClient(fd)->sendOff();
 		}
 	}
 	return true;

@@ -70,18 +70,17 @@ void Server::handle_send(int client_fd)
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
         if (bytes_sent > 0) {
             std::cout << "buffer from send: " << client.send_buffer.c_str() << std::endl;
-            client.send_buffer.erase(0, bytes_sent);
+            
         }
         else {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break; // can't write more now
             std::string x = "";
-            std::cout << "send-quit" << std::endl;
 		    quit(x, client);
             return;
         }
     }
-
+    client.send_buffer.erase();
     // if (client.send_buffer.empty())
     //     client.setWrite(false); // stop watching for EPOLLOUT
 }
@@ -131,11 +130,9 @@ void Server::ft_socket()
 
 void Server::accept_client()
 {
-	std::cout << "Incoming new client ";
     struct sockaddr_in client_addr;
     socklen_t addrlen = sizeof(client_addr);
     int client_fd = accept(_serverSocketFd, (struct sockaddr*)&client_addr, &addrlen);
-    std::cout << "received FD #" << client_fd;
     if (client_fd == -1)
         throw std::runtime_error("accept() failed");
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
@@ -155,50 +152,107 @@ void Server::accept_client()
     _ev.data.fd = client_fd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() for new client failed");
-    _clients.push_back(Client(hostname, _ev));
+    _clients.push_back(Client(hostname, _ev,_epollfd));
 //    _nrEvents++;
-    std::cout << " and was added successfully" << std::endl;
 }
 
 void Server::recv_client(int client_fd)
 {
-//	std::cout << "receiving msg for FD " << client_fd << std::endl;
-    char buffer[512]; //this will fuck us during eval
+    char buffer[4096];
+    std::string parsable;
+    int bytes_received = 1;
+    
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
-        int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-        if (bytes_received > 0) {
-            std::cout << "buffer from recv: " << buffer << std::endl;
-            parseClientInput(client_fd, std::string(buffer));
+        bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+        if (bytes_received < 1)
+        {
+            if (bytes_received == 0)
+            {
+                std::string x = "";
+                quit(x, *getClient(client_fd));
+                throw std::runtime_error("connection closed by peer");
+            }
+            else
+            {
+                if (bytes_received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+                    break;//normal finish
+                throw std::runtime_error("recv failed");
+            }
         }
-        else if (bytes_received == 0) {
-            std::string x = "";
-            std::cout << "recv-quit" << std::endl;
-		    quit(x, *getClient(client_fd));
-            return;
-        }
-        else {
-            if (errno != EWOULDBLOCK)
-//                break; // all data read
-            	throw std::runtime_error("recv() failed");
-        }
+        parsable += buffer;
+        
     }
+    std::cout << "FULL COMMAND BUFFER: " << parsable << "|" << std::endl;
+    parseClientInput(client_fd, parsable);
 }
+
+// void Server::recv_client(int client_fd)
+// {
+//     std::cout << "this is recv_client" << std::endl;
+//     char buffer[12];
+//     std::string toParser;
+//     int buffer_size = 12;
+//     bool run = true;
+//     while (run)
+//     {
+//         run = false;
+//         std::cout << "recv_client loop" << std::endl;
+//         memset(buffer, 0, sizeof(buffer));
+//         int bytes_received = recv(client_fd, buffer, buffer_size - 1, 0);
+//         buffer[buffer_size] = '\0';
+
+//         std::cout << "bytes_received: " << bytes_received << std::endl;
+//         if (bytes_received == buffer_size - 1) {
+//             toParser += buffer;
+//             memset(buffer, 0, sizeof(buffer));
+//             run = true;
+//         }
+//         else if (bytes_received > 0) {
+//             toParser += buffer;
+//             memset(buffer, 0, sizeof(buffer));
+
+//             std::cout << "buffer from recv: " << toParser << std::endl;
+//             parseClientInput(client_fd, toParser);
+//         }
+//         else if (bytes_received == 0) {
+//             std::string x = "";
+//             std::cout << "recv-quit" << std::endl;
+//             quit(x, *getClient(client_fd));
+//             return;
+//         }
+//         else {
+//             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+//                 break;
+//             } else {
+//                 std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
+//                 std::string x = "";
+//                 quit(x, *getClient(client_fd));
+//                 return;
+//             }
+//         }
+//     }
+// }
 
 void Server::quit_client(int client_fd)
 {
     if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, client_fd, NULL) == -1)
         std::cerr << "epoll_ctl DEL failed for fd " << client_fd << std::endl;
-    std::cout << "closing fd " << client_fd << std::endl;
-    close(client_fd);
-
+        
     std::vector<Client>::iterator it = getClient(client_fd);
     if (it != _clients.end())
         _clients.erase(it);
-
+    close(client_fd);
 //    _nrEvents--;
     std::cout << "Client disconnected" << std::endl;
+}
+
+bool Server::hasClient(int fd) {
+	for (size_t i = 0; i < _clients.size(); ++i)
+		if (_clients[i].getFd() == fd)
+			return true;
+	return false;
 }
 
 void Server::start()
@@ -209,23 +263,26 @@ void Server::start()
 //    int nfds;
 	while (_running)
 	{
-		// if (poll(_pollfds, _nfds, -1) == -1)
-		//     throw std::runtime_error("poll() failed");
 		_nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
 		if (_nrEvents == -1)
 			throw std::runtime_error("epoll_wait() failed");
 		for (int i = 0; i < _nrEvents; ++i)
 		{
-//			std::cout << "parsing
 			if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
-				std::string x = "";
-				std::cout << "epollhup-quit" << std::endl;
-				quit(x, *getClient(events[i].data.fd));
+                if (hasClient(events[i].data.fd))
+                {
+                    std::string x = "";
+                    quit(x, *getClient(events[i].data.fd));
+                }
 			}
 			else if (events[i].events & EPOLLIN) {
 				if (events[i].data.fd == _serverSocketFd) accept_client();
-					else recv_client(events[i].data.fd);
+					else
+                        recv_client(events[i].data.fd);
 			}
+            if (events[i].events & EPOLLOUT)
+                handle_send(events[i].data.fd);
+            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
 		}
         //sighandler set _running auf false
 

@@ -18,13 +18,13 @@ class Client
         // pollfd      *_pfd;
         bool        _isUserComplete;
         bool        _isNickValid;
-        // int         _epollfd;
+        int         _epollfd;
         struct epoll_event _ev;
 
     public:
         std::string send_buffer;
         std::string recv_buffer;
-        Client(std::string hostname, struct epoll_event _ev);
+        Client(std::string hostname, struct epoll_event _ev, int epollfd);
         // Client(std::string hostname, pollfd *pfd);
         Client();
         ~Client();

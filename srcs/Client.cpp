@@ -13,12 +13,11 @@ Client::Client()
 
 Client::~Client()
 {
-    std::cout << "Client destructor called for " << _nickname << std::endl;
+    // std::cout << "Client destructor called for " << _nickname << std::endl;
 }
 
 // Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)
-Client::Client(std::string hostname, struct epoll_event _ev) : _hostname(hostname), _ev(_ev)
-{
+Client::Client(std::string hostname, struct epoll_event _ev, int epollfd) : _hostname(hostname), _epollfd(epollfd), _ev(_ev) {
 	_nickname = _username = _realname = _servername = "*";
     // _write_ready = false;
     _capNegotiation = false;
@@ -51,14 +50,30 @@ int Client::getFd() const
 //     // }
 // }
 
-void	Client::sendOff() {
-	send(_ev.data.fd, send_buffer.c_str(), send_buffer.size(), 0);
-	send_buffer.erase();
+void Client::sendOff()
+{
+    while (!send_buffer.empty()) {
+        ssize_t bytes_sent = send(_ev.data.fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
+        if (bytes_sent >= 0) {
+            std::cout << "Sent to client: " << send_buffer.substr(0, bytes_sent) << std::endl;
+            send_buffer.erase(0, bytes_sent);
+        }
+        else if (bytes_sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            break;
+        }
+        else {
+            std::cerr << "send() failed on fd " << _ev.data.fd << ": " << strerror(errno) << std::endl;
+            break;
+        }
+    }
 }
 
 void Client::sendToClient(std::string message)
 {
     send_buffer += message + "\r\n";
+    _ev.events = EPOLLIN | EPOLLET | EPOLLHUP;
+    if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
+           throw std::runtime_error("epoll_ctl(MOD) failed");
     // setWrite(true);
 }
 

@@ -5,7 +5,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 	_serverName = "ircserv";
 	_serverSocketFd = -1;
     _epollfd = -1;
-    _totalnumberfds = 0;
+    _nrEvents = 0;
 	// _nfds = 0;
 	_commandMap.insert(std::make_pair("CAP",	&Server::cap));
 	_commandMap.insert(std::make_pair("INVITE",	&Server::invite));
@@ -126,14 +126,16 @@ void Server::ft_socket()
     _ev.data.fd = _serverSocketFd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serverSocketFd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() failed");
-    _totalnumberfds++;
+//    _totalnumberfds++;
 }
 
 void Server::accept_client()
 {
+	std::cout << "Incoming new client ";
     struct sockaddr_in client_addr;
     socklen_t addrlen = sizeof(client_addr);
     int client_fd = accept(_serverSocketFd, (struct sockaddr*)&client_addr, &addrlen);
+    std::cout << "received FD #" << client_fd;
     if (client_fd == -1)
         throw std::runtime_error("accept() failed");
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
@@ -146,20 +148,22 @@ void Server::accept_client()
     // _clients.push_back(Client(hostname, &_pollfds[_nfds]));
     // _nfds++;
     //epoll CHANGE:
-    if (_totalnumberfds >= SOMAXCONN)
-        throw std::runtime_error("Too many clients");
+//    if (_totalnumberfds >= SOMAXCONN)
+//        throw std::runtime_error("Too many clients");
     struct epoll_event _ev;
-    _ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLHUP;
+    _ev.events = EPOLLIN | EPOLLET | EPOLLHUP | EPOLLRDHUP;
     _ev.data.fd = client_fd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() for new client failed");
     _clients.push_back(Client(hostname, _ev));
-    _totalnumberfds++;
+//    _nrEvents++;
+    std::cout << " and was added successfully" << std::endl;
 }
 
 void Server::recv_client(int client_fd)
 {
-    char buffer[512];
+//	std::cout << "receiving msg for FD " << client_fd << std::endl;
+    char buffer[512]; //this will fuck us during eval
     while (true)
     {
         memset(buffer, 0, sizeof(buffer));
@@ -175,9 +179,9 @@ void Server::recv_client(int client_fd)
             return;
         }
         else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break; // all data read
-            throw std::runtime_error("recv() failed");
+            if (errno != EWOULDBLOCK)
+//                break; // all data read
+            	throw std::runtime_error("recv() failed");
         }
     }
 }
@@ -186,47 +190,43 @@ void Server::quit_client(int client_fd)
 {
     if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, client_fd, NULL) == -1)
         std::cerr << "epoll_ctl DEL failed for fd " << client_fd << std::endl;
+    std::cout << "closing fd " << client_fd << std::endl;
     close(client_fd);
 
     std::vector<Client>::iterator it = getClient(client_fd);
     if (it != _clients.end())
         _clients.erase(it);
 
-    _totalnumberfds--;
+//    _nrEvents--;
     std::cout << "Client disconnected" << std::endl;
 }
 
 void Server::start()
 {
-    ft_socket();
-    std::cout << "Socket open, awaiting clients." << std::endl;
-    struct epoll_event events[SOMAXCONN];
-    int nfds;
-    while (_running)
-    {
-        // if (poll(_pollfds, _nfds, -1) == -1)
-        //     throw std::runtime_error("poll() failed");
-        nfds = epoll_wait(_epollfd, events, SOMAXCONN, -1);
-        if (nfds == -1)
-            throw std::runtime_error("epoll_wait() failed");
-        for (int i = 0; i < nfds; ++i)
-        {
-            if (events[i].data.fd == _serverSocketFd)
-                accept_client();
-            else
-            {
-                if (events[i].events & EPOLLIN)
-                    recv_client(events[i].data.fd);
-                if (events[i].events & EPOLLOUT)
-                    handle_send(events[i].data.fd);
-                if (events[i].events & EPOLLHUP)
-                {
-                    std::string x = "";
-                    std::cout << "epollhup-quit" << std::endl;
-                    quit(x, *getClient(events[i].data.fd));
-                }
-            }
-        }
+	ft_socket();
+	std::cout << "Socket open, awaiting clients." << std::endl;
+	struct epoll_event events[SOMAXCONN];
+//    int nfds;
+	while (_running)
+	{
+		// if (poll(_pollfds, _nfds, -1) == -1)
+		//     throw std::runtime_error("poll() failed");
+		_nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
+		if (_nrEvents == -1)
+			throw std::runtime_error("epoll_wait() failed");
+		for (int i = 0; i < _nrEvents; ++i)
+		{
+//			std::cout << "parsing
+			if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
+				std::string x = "";
+				std::cout << "epollhup-quit" << std::endl;
+				quit(x, *getClient(events[i].data.fd));
+			}
+			else if (events[i].events & EPOLLIN) {
+				if (events[i].data.fd == _serverSocketFd) accept_client();
+					else recv_client(events[i].data.fd);
+			}
+		}
         //sighandler set _running auf false
 
         // if (_pollfds[0].revents & POLLIN)

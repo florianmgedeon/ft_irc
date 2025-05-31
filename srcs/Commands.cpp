@@ -24,6 +24,7 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
+//	Client c = *getClient(fd);
 //	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
@@ -33,10 +34,8 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
 			if (comMapIt != _commandMap.end())
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
-			else {
-				Client c = *getClient(fd);
-				c.sendToClient(c.getColNick() + " " + cmd + " :Unknown command");
-			}
+			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
+			getClient(fd)->sendOff();
 		}
 	}
 	return true;

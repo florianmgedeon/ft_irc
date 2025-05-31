@@ -51,6 +51,11 @@ int Client::getFd() const
 //     // }
 // }
 
+void	Client::sendOff() {
+	send(_ev.data.fd, send_buffer.c_str(), send_buffer.size(), 0);
+	send_buffer.erase();
+}
+
 void Client::sendToClient(std::string message)
 {
     send_buffer += message + "\r\n";

@@ -30,6 +30,7 @@ class Client
         ~Client();
         // void        setWrite(bool write);
         int         getFd() const;
+        void		sendOff();
         void        sendToClient(std::string message);
         void        recvFromClient(char *buffer);
         void        setNickname(std::string nickname);

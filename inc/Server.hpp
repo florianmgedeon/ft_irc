@@ -36,7 +36,7 @@ class Server
         // pollfd                          _pollfds[SOMAXCONN];
         int                             _epollfd;
         struct epoll_event              _ev;
-        int                             _totalnumberfds;
+        int                             _nrEvents;
         // nfds_t                          _nfds;
         bool                            _running;
         std::vector<Client>             _clients;

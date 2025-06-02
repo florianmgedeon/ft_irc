@@ -67,6 +67,7 @@ void Server::handle_send(int client_fd)
 {
     Client &client = *getClient(client_fd);
     size_t total_sent = 0;
+    std::cout << "Sending to client: " << client.send_buffer << std::endl;
 
     while (!client.send_buffer.empty()) {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
@@ -77,9 +78,12 @@ void Server::handle_send(int client_fd)
         else {
             if (bytes_sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
                 break; // Can't write more right now
-            std::string x = "";
-            quit(x, client); // Connection error
-            return;
+            else {
+                std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
+                std::string x = "";
+                quit(x, client); // Connection error
+                return;
+            }
         }
     }
 
@@ -172,6 +176,7 @@ void Server::recv_client(int client_fd)
         {
             if (bytes_received == 0)
             {
+                std::cout << "recv_client quitting" << std::endl;
                 std::string x = "";
                 quit(x, *getClient(client_fd));
                 throw std::runtime_error("connection closed by peer");
@@ -272,6 +277,7 @@ void Server::start()
 			if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
                 if (hasClient(events[i].data.fd))
                 {
+                    std::cout << "main loop quitting" << std::endl;
                     std::string x = "";
                     quit(x, *getClient(events[i].data.fd));
                 }

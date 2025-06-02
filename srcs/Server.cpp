@@ -66,23 +66,25 @@ bool	Server::channelExists(std::string nick) {
 void Server::handle_send(int client_fd)
 {
     Client &client = *getClient(client_fd);
+    size_t total_sent = 0;
+
     while (!client.send_buffer.empty()) {
-        int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
+        int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
+                              client.send_buffer.size() - total_sent, MSG_NOSIGNAL);
         if (bytes_sent > 0) {
-            std::cout << "buffer from send: " << client.send_buffer.c_str() << std::endl;
-            
+            total_sent += bytes_sent;
         }
         else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                break; // can't write more now
+            if (bytes_sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+                break; // Can't write more right now
             std::string x = "";
-		    quit(x, client);
+            quit(x, client); // Connection error
             return;
         }
     }
-    client.send_buffer.erase();
-    // if (client.send_buffer.empty())
-    //     client.setWrite(false); // stop watching for EPOLLOUT
+
+    if (total_sent > 0)
+        client.send_buffer.erase(0, total_sent);
 }
 
 
@@ -121,7 +123,7 @@ void Server::ft_socket()
     _epollfd = epoll_create1(0);
     if (_epollfd == -1)
         throw std::runtime_error("epoll_create1() failed");
-    _ev.events = EPOLLIN;
+    _ev.events = EPOLLIN | EPOLLET;
     _ev.data.fd = _serverSocketFd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serverSocketFd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() failed");
@@ -148,7 +150,7 @@ void Server::accept_client()
 //    if (_totalnumberfds >= SOMAXCONN)
 //        throw std::runtime_error("Too many clients");
     struct epoll_event _ev;
-    _ev.events = EPOLLIN | EPOLLET | EPOLLHUP | EPOLLRDHUP;
+    _ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLHUP | EPOLLRDHUP;
     _ev.data.fd = client_fd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() for new client failed");
@@ -181,8 +183,7 @@ void Server::recv_client(int client_fd)
                 throw std::runtime_error("recv failed");
             }
         }
-        parsable += buffer;
-        
+        parsable.append(buffer, bytes_received);
     }
     std::cout << "FULL COMMAND BUFFER: " << parsable << "|" << std::endl;
     parseClientInput(client_fd, parsable);

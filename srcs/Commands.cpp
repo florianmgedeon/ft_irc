@@ -36,8 +36,8 @@ bool	Server::parseClientInput(int fd, std::string buffer) {//check if 1 total co
 			if (comMapIt != _commandMap.end())
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
 			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
-			if (cmd != "QUIT")
-				getClient(fd)->sendOff();
+			// if (cmd != "QUIT")
+			// 	getClient(fd)->sendOff();
 		}
 	}
 	return true;

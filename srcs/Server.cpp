@@ -67,12 +67,12 @@ void Server::handle_send(int client_fd)
 {
     Client &client = *getClient(client_fd);
     size_t total_sent = 0;
-    std::cout << "Sending to client: " << client.send_buffer << std::endl;
+    std::cout << "All for send(): " << client.send_buffer << "|" << std::endl;
 
     while (!client.send_buffer.empty()) {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
                               client.send_buffer.size() - total_sent, MSG_NOSIGNAL);
-        if (bytes_sent > 0) {
+                              if (bytes_sent > 0) {
             total_sent += bytes_sent;
         }
         else {
@@ -190,7 +190,7 @@ void Server::recv_client(int client_fd)
         }
         parsable.append(buffer, bytes_received);
     }
-    std::cout << "FULL COMMAND BUFFER: " << parsable << "|" << std::endl;
+    std::cout << "All from recv(): " << parsable << "|" << std::endl;
     parseClientInput(client_fd, parsable);
 }
 

@@ -57,4 +57,6 @@ class Client
         std::string getUsername() const;
         std::string getServername() const;
 
+        struct epoll_event &getEv();
+
 };

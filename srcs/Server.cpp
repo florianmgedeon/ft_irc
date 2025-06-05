@@ -72,16 +72,17 @@ void Server::handle_send(int client_fd)
     while (!client.send_buffer.empty()) {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
                               client.send_buffer.size() - total_sent, MSG_NOSIGNAL);
-                              if (bytes_sent > 0) {
+        if (bytes_sent > 0) {
             total_sent += bytes_sent;
-        }
-        else {
-            if (bytes_sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
-                break; // Can't write more right now
+        } else if (bytes_sent == 0) {
+            break;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
             else {
                 std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
                 std::string x = "";
-                quit(x, client); // Connection error
+                quit(x, client);
                 return;
             }
         }
@@ -89,8 +90,14 @@ void Server::handle_send(int client_fd)
 
     if (total_sent > 0)
         client.send_buffer.erase(0, total_sent);
+    //remove EPOLLOUT
+    if (client.send_buffer.empty()) {
+        struct epoll_event ev = client.getEv();
+        ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
+        if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, client.getFd(), &ev) == -1)
+            std::cerr << "epoll_ctl(MOD) failed to disable EPOLLOUT\n";
+    }
 }
-
 
 void Server::ft_socket()
 {
@@ -127,7 +134,7 @@ void Server::ft_socket()
     _epollfd = epoll_create1(0);
     if (_epollfd == -1)
         throw std::runtime_error("epoll_create1() failed");
-    _ev.events = EPOLLIN | EPOLLET;
+    _ev.events = EPOLLIN;
     _ev.data.fd = _serverSocketFd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serverSocketFd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() failed");
@@ -144,17 +151,11 @@ void Server::accept_client()
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
 
-    // if (_nfds >= SOMAXCONN)
-    //     throw std::runtime_error("Too many clients");
-    // _pollfds[_nfds].fd = client_fd;
-    // _pollfds[_nfds].events = POLLIN | POLLHUP;
-    // _clients.push_back(Client(hostname, &_pollfds[_nfds]));
-    // _nfds++;
     //epoll CHANGE:
 //    if (_totalnumberfds >= SOMAXCONN)
 //        throw std::runtime_error("Too many clients");
     struct epoll_event _ev;
-    _ev.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLHUP | EPOLLRDHUP;
+    _ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP;
     _ev.data.fd = client_fd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() for new client failed");
@@ -166,33 +167,27 @@ void Server::recv_client(int client_fd)
 {
     char buffer[4096];
     std::string parsable;
-    int bytes_received = 1;
-    
-    while (true)
-    {
-        memset(buffer, 0, sizeof(buffer));
-        bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-        if (bytes_received < 1)
-        {
-            if (bytes_received == 0)
-            {
-                std::cout << "recv_client quitting" << std::endl;
-                std::string x = "";
-                quit(x, *getClient(client_fd));
-                throw std::runtime_error("connection closed by peer");
-            }
-            else
-            {
-                if (bytes_received == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
-                    break;//normal finish
-                throw std::runtime_error("recv failed");
-            }
-        }
-        parsable.append(buffer, bytes_received);
+
+    memset(buffer, 0, sizeof(buffer));
+    int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+
+    if (bytes_received < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return; // nothing to read now
+        else
+            throw std::runtime_error("recv failed");
+    } else if (bytes_received == 0) {
+        std::cout << "recv_client quitting" << std::endl;
+        std::string x = "";
+        quit(x, *getClient(client_fd));
+        throw std::runtime_error("connection closed by peer");
     }
+
+    parsable.append(buffer, bytes_received);
     std::cout << "All from recv(): " << parsable << "|" << std::endl;
     parseClientInput(client_fd, parsable);
 }
+
 
 // void Server::recv_client(int client_fd)
 // {
@@ -267,30 +262,35 @@ void Server::start()
 	std::cout << "Socket open, awaiting clients." << std::endl;
 	struct epoll_event events[SOMAXCONN];
 //    int nfds;
-	while (_running)
-	{
-		_nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
-		if (_nrEvents == -1)
-			throw std::runtime_error("epoll_wait() failed");
-		for (int i = 0; i < _nrEvents; ++i)
-		{
-			if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
-                if (hasClient(events[i].data.fd))
-                {
+    while (_running)
+    {
+        _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
+        if (_nrEvents == -1)
+            throw std::runtime_error("epoll_wait() failed");
+
+        for (int i = 0; i < _nrEvents; ++i)
+        {
+            if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
+                if (hasClient(events[i].data.fd)) {
                     std::cout << "main loop quitting" << std::endl;
                     std::string x = "";
                     quit(x, *getClient(events[i].data.fd));
                 }
-			}
-			else if (events[i].events & EPOLLIN) {
-				if (events[i].data.fd == _serverSocketFd) accept_client();
-					else
-                        recv_client(events[i].data.fd);
-			}
-            if (events[i].events & EPOLLOUT)
+            }
+            if (events[i].events & EPOLLIN) {
+                if (events[i].data.fd == _serverSocketFd)
+                    accept_client();
+                else
+                    recv_client(events[i].data.fd);
+            }
+            if (events[i].events & EPOLLOUT) {
                 handle_send(events[i].data.fd);
+            }
+
             std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
-		}
+        }
+    }
+
         //sighandler set _running auf false
 
         // if (_pollfds[0].revents & POLLIN)
@@ -318,6 +318,6 @@ void Server::start()
         //         ++i;
         // }
         //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
-    }
+    // }
     close(_serverSocketFd);
 }

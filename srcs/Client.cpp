@@ -32,6 +32,11 @@ int Client::getFd() const
     return _ev.data.fd;
 }
 
+struct epoll_event &Client::getEv()
+{
+    return _ev;
+}
+
 // void Client::setWrite(bool write)
 // {
 //     // _write_ready = write;
@@ -71,10 +76,10 @@ int Client::getFd() const
 void Client::sendToClient(std::string message)
 {
     send_buffer += message + "\r\n";
-    // _ev.events = EPOLLIN | EPOLLET | EPOLLHUP;
-    // if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
-    //        throw std::runtime_error("epoll_ctl(MOD) failed");
-    // setWrite(true);
+    //add EPOLLOUT
+    _ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP;
+    if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
+        throw std::runtime_error("epoll_ctl(MOD) failed");
 }
 
 void Client::recvFromClient(char *buffer)

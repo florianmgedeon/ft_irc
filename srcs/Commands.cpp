@@ -20,10 +20,11 @@ std::string	tokenize(std::string &line, char c) {
 
 std::string	strPastColon(std::string &line) {return line.substr(line.find(':') + 1);}
 
-bool	Server::parseClientInput(int fd, std::string buffer) {
+bool	Server::parseClientInput(int fd, std::string buffer) {//check if 1 total command is >512
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
+//	Client c = *getClient(fd);
 //	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
@@ -33,10 +34,9 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
 			if (comMapIt != _commandMap.end())
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
-			else {
-				Client c = *getClient(fd);
-				c.sendToClient(c.getColNick() + " " + cmd + " :Unknown command");
-			}
+			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
+			// if (cmd != "QUIT")
+			// 	getClient(fd)->sendOff();
 		}
 	}
 	return true;
@@ -49,13 +49,20 @@ bool	Server::cap(std::string &line, Client &c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
 	std::string param = tokenize(line, ' ');
 	if (param == "LS")
-		return (c.setCapNegotiation(true), c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
+		return (/*c.setCapNegotiation(true), */c.sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
 //	if (param == "LIST")
 	if (param == "REQ")//TODO: parse and actually do request
 		return (c.sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
 	if (param == "END")
-		return (true);
-	return false;
+	{
+		c.setCapNegotiation(true);
+		if (c.getIsPasswordValid() && c.getIsUserComplete() && c.getIsNickValid() && !c.getIsRegistered())
+		{
+			c.setIsRegistered(true);
+			c.sendToClient(":" + _serverName + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		}
+	}
+	return (true);
 }
 //TODO: invite
 bool	Server::invite(std::string &line, Client &c) {
@@ -166,12 +173,12 @@ bool	Server::nick(std::string &line, Client &c) {
 		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
 	c.setNickname(line);
 	c.setIsNickValid(true);
-	for (size_t i = 0; i < _clients.size(); i++)
-		_clients[i].sendToClient(c.getColNick() + " NICK " + line);
 	// std::cout << "Nickname set to: " << line << std::endl;
-	if (c.getIsUserComplete() && !c.getIsRegistered()) {
+	if (c.getCapNegotiation() && c.getIsUserComplete() && !c.getIsRegistered()) {
 		c.setIsRegistered(true);
 		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		for (size_t i = 0; i < _clients.size(); i++)
+			_clients[i].sendToClient(c.getColNick() + " NICK " + line);
 //		std::cout << "User registered: " << c.getNickname() << std::endl;
 	}
 	return true;
@@ -218,8 +225,8 @@ int Server::getIndexofClient(int fd) {
 }
 
 bool	Server::pass(std::string &line, Client &c) {
-	if (c.getCapNegotiation() == false)
-		return (c.sendToClient(c.getColNick() + " 421 PASS :CAP negotiation not finished"), false);
+	// if (c.getCapNegotiation() == false)
+		// return (c.sendToClient(c.getColNick() + " 421 PASS :CAP negotiation not finished"), false);
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c.getIsRegistered())
@@ -229,7 +236,9 @@ bool	Server::pass(std::string &line, Client &c) {
 	else 
 	{
 		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
-		quit_client(getIndexofClient(c.getFd()));
+		std::string x = "";
+		std::cout << "pass-quit" << std::endl;
+		quit(x, c);
 		return (false);
 	}
 }
@@ -331,24 +340,24 @@ bool	Server::user(std::string &line, Client &c) {
 	c.setServername(servername);
 	c.setRealname(realname);
 	c.setIsUserComplete(true);
-	// std::cout << "Username set to: " << username << std::endl;
-	if (c.getIsNickValid() && !c.getIsRegistered())
+	if (c.getCapNegotiation() && c.getIsNickValid() && !c.getIsRegistered())
 	{
 		c.setIsRegistered(true);
-		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
-		std::cout << "User registered: " << username << std::endl;
+		c.sendToClient(":" + _serverName + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
+		// std::cout << "User registered: " << username << std::endl;
 		return (true);
 	}
 	return (false);
 }
 
-bool	Server::quit(std::string &line, Client &c) {
-	// c.sendToClient(c.getColNick() + " QUIT " + line);
+bool	Server::quit(std::string &line, Client &c)
+{
 	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
-		if (it->second.isMember(it->first)) {
+		if (it->second.isMember(it->first))
+		{
 			std::string call = (*it).first + " " + line.substr(1);
 			part(call, c);
 		}
-	quit_client(getIndexofClient(c.getFd()));
+	quit_client(c.getFd());
 	return true;
 }

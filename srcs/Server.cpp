@@ -4,7 +4,9 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 	_running = true;
 	_serverName = "ircserv";
 	_serverSocketFd = -1;
-	_nfds = 0;
+    _epollfd = -1;
+    _nrEvents = 0;
+	// _nfds = 0;
 	_commandMap.insert(std::make_pair("CAP",	&Server::cap));
 	_commandMap.insert(std::make_pair("INVITE",	&Server::invite));
 	_commandMap.insert(std::make_pair("JOIN",	&Server::join));
@@ -34,8 +36,14 @@ void Server::setServerName(const std::string &serverName) {_serverName = serverN
 std::vector<Client>::iterator	Server::getClient(int fd) {
 	std::vector<Client>::iterator i = _clients.begin();
 	for (; i != _clients.end(); i++)
+    {
 		if ((*i).getFd() == fd)
 			break;
+    }
+    if (i == _clients.end())
+    {
+        throw std::runtime_error("Client not found");
+    }
 	return i;
 }
 
@@ -55,24 +63,39 @@ bool	Server::channelExists(std::string nick) {
 
 //============================================ poll loop ====================================//
 
-void Server::handle_send(int index)
+void Server::handle_send(int client_fd)
 {
-    Client &client = *(getClient(_pollfds[index].fd));
-    if (!client.send_buffer.empty())
-    {
-        int bytes_sent = send(client.getFd(), client.send_buffer.c_str(), client.send_buffer.size(), MSG_NOSIGNAL);
-        if (bytes_sent > 0)
-        {
-            std::cout << "buffer from send: " << client.send_buffer.c_str() << std::endl;
-            client.send_buffer.erase(0, bytes_sent);
-            if (client.send_buffer.empty())
-            {
-                client.setWrite(false);
-                _pollfds[index].events = POLLIN | POLLHUP;
+    Client &client = *getClient(client_fd);
+    size_t total_sent = 0;
+    std::cout << "All for send(): " << client.send_buffer << "|" << std::endl;
+
+    while (!client.send_buffer.empty()) {
+        int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
+                              client.send_buffer.size() - total_sent, MSG_NOSIGNAL);
+        if (bytes_sent > 0) {
+            total_sent += bytes_sent;
+        } else if (bytes_sent == 0) {
+            break;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            else {
+                std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
+                std::string x = "";
+                quit(x, client);
+                return;
             }
         }
-        else if (bytes_sent == -1 && errno != EAGAIN && errno != EWOULDBLOCK)
-            quit_client(index);
+    }
+
+    if (total_sent > 0)
+        client.send_buffer.erase(0, total_sent);
+    //remove EPOLLOUT
+    if (client.send_buffer.empty()) {
+        struct epoll_event ev = client.getEv();
+        ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
+        if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, client.getFd(), &ev) == -1)
+            std::cerr << "epoll_ctl(MOD) failed to disable EPOLLOUT\n";
     }
 }
 
@@ -103,10 +126,19 @@ void Server::ft_socket()
     if (listen(_serverSocketFd, SOMAXCONN) == -1)
         throw std::runtime_error("listen() failed");
 
-    _nfds = 1;
-    memset(_pollfds, 0, sizeof(_pollfds));
-    _pollfds[0].fd = _serverSocketFd;
-    _pollfds[0].events = POLLIN | POLLHUP | POLLOUT;
+    // _nfds = 1;
+    // memset(_pollfds, 0, sizeof(_pollfds));
+    // _pollfds[0].fd = _serverSocketFd;
+    // _pollfds[0].events = POLLIN | POLLHUP | POLLOUT;
+    //epoll CHANGE:
+    _epollfd = epoll_create1(0);
+    if (_epollfd == -1)
+        throw std::runtime_error("epoll_create1() failed");
+    _ev.events = EPOLLIN;
+    _ev.data.fd = _serverSocketFd;
+    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serverSocketFd, &_ev) == -1)
+        throw std::runtime_error("epoll_ctl() failed");
+//    _totalnumberfds++;
 }
 
 void Server::accept_client()
@@ -119,95 +151,173 @@ void Server::accept_client()
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
 
-    if (_nfds >= SOMAXCONN)
-        throw std::runtime_error("Too many clients");
-    _pollfds[_nfds].fd = client_fd;
-    _pollfds[_nfds].events = POLLIN | POLLHUP;
-    _clients.push_back(Client(hostname, &_pollfds[_nfds]));
-    _nfds++;
+    //epoll CHANGE:
+//    if (_totalnumberfds >= SOMAXCONN)
+//        throw std::runtime_error("Too many clients");
+    struct epoll_event _ev;
+    _ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP;
+    _ev.data.fd = client_fd;
+    if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
+        throw std::runtime_error("epoll_ctl() for new client failed");
+    _clients.push_back(Client(hostname, _ev,_epollfd));
+//    _nrEvents++;
 }
 
-bool Server::recv_client(int index)
+void Server::recv_client(int client_fd)
 {
-    char buffer[512];
-    int client_fd = _pollfds[index].fd;
-    // Client &client = _clients[client_fd];
-    // if (!client.getIsRegistered())
-    //     return false;
+    char buffer[4096];
+    std::string parsable;
+
     memset(buffer, 0, sizeof(buffer));
     int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
-    if (bytes_received == 0)
-        return quit_client(index); // true = client removed
-    else if (bytes_received < 0)
-    {
+
+    if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return false;
-        throw std::runtime_error("recv() failed");
+            return; // nothing to read now
+        else
+            throw std::runtime_error("recv failed");
+    } else if (bytes_received == 0) {
+        std::cout << "recv_client quitting" << std::endl;
+        std::string x = "";
+        quit(x, *getClient(client_fd));
+        throw std::runtime_error("connection closed by peer");
     }
-    else
-    {
-        std::cout << "buffer from recv: " << buffer << std::endl;
-        parseClientInput(client_fd, std::string(buffer));
-        return false;
-    }
+
+    parsable.append(buffer, bytes_received);
+    std::cout << "All from recv(): " << parsable << "|" << std::endl;
+    parseClientInput(client_fd, parsable);
 }
 
-bool Server::quit_client(int index)
+
+// void Server::recv_client(int client_fd)
+// {
+//     std::cout << "this is recv_client" << std::endl;
+//     char buffer[12];
+//     std::string toParser;
+//     int buffer_size = 12;
+//     bool run = true;
+//     while (run)
+//     {
+//         run = false;
+//         std::cout << "recv_client loop" << std::endl;
+//         memset(buffer, 0, sizeof(buffer));
+//         int bytes_received = recv(client_fd, buffer, buffer_size - 1, 0);
+//         buffer[buffer_size] = '\0';
+
+//         std::cout << "bytes_received: " << bytes_received << std::endl;
+//         if (bytes_received == buffer_size - 1) {
+//             toParser += buffer;
+//             memset(buffer, 0, sizeof(buffer));
+//             run = true;
+//         }
+//         else if (bytes_received > 0) {
+//             toParser += buffer;
+//             memset(buffer, 0, sizeof(buffer));
+
+//             std::cout << "buffer from recv: " << toParser << std::endl;
+//             parseClientInput(client_fd, toParser);
+//         }
+//         else if (bytes_received == 0) {
+//             std::string x = "";
+//             std::cout << "recv-quit" << std::endl;
+//             quit(x, *getClient(client_fd));
+//             return;
+//         }
+//         else {
+//             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+//                 break;
+//             } else {
+//                 std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
+//                 std::string x = "";
+//                 quit(x, *getClient(client_fd));
+//                 return;
+//             }
+//         }
+//     }
+// }
+
+void Server::quit_client(int client_fd)
 {
-    std::vector<Client>::iterator clientIt = getClient(_pollfds[index].fd);
-    close(_pollfds[index].fd);
-
-    if (_nfds > 2)
-    {
-        _pollfds[index] = _pollfds[_nfds - 1];
-        _pollfds[_nfds - 1].fd = -1;
-        _pollfds[_nfds - 1].events = 0;
-    }
-    else if (_nfds == 2)
-    {
-        _pollfds[index].fd = -1;
-        _pollfds[index].events = 0;
-    }
-
-    _nfds--;
-    _clients.erase(clientIt);
+    if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, client_fd, NULL) == -1)
+        std::cerr << "epoll_ctl DEL failed for fd " << client_fd << std::endl;
+        
+    std::vector<Client>::iterator it = getClient(client_fd);
+    if (it != _clients.end())
+        _clients.erase(it);
+    close(client_fd);
+//    _nrEvents--;
     std::cout << "Client disconnected" << std::endl;
-    return true;
+}
+
+bool Server::hasClient(int fd) {
+	for (size_t i = 0; i < _clients.size(); ++i)
+		if (_clients[i].getFd() == fd)
+			return true;
+	return false;
 }
 
 void Server::start()
 {
-    ft_socket();
-    std::cout << "Socket open, awaiting clients." << std::endl;
+	ft_socket();
+	std::cout << "Socket open, awaiting clients." << std::endl;
+	struct epoll_event events[SOMAXCONN];
+//    int nfds;
     while (_running)
     {
-        if (poll(_pollfds, _nfds, -1) == -1)
-            throw std::runtime_error("poll() failed");
-        if (_pollfds[0].revents & POLLIN)
-            accept_client();
-        nfds_t i = 1;
-        while (i < _nfds)
+        _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
+        if (_nrEvents == -1)
+            throw std::runtime_error("epoll_wait() failed");
+
+        for (int i = 0; i < _nrEvents; ++i)
         {
-            short revents = _pollfds[i].revents;
-            bool client_removed = false;
-            try
-            {
-                if (revents & POLLIN)
-                    client_removed = recv_client(i);
-                if (!client_removed && (revents & POLLOUT))
-                    handle_send(i);
-                if (!client_removed && (revents & POLLHUP))
-                    client_removed = quit_client(i);
+            if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
+                if (hasClient(events[i].data.fd)) {
+                    std::cout << "main loop quitting" << std::endl;
+                    std::string x = "";
+                    quit(x, *getClient(events[i].data.fd));
+                }
             }
-            catch (const std::exception &e)
-            {
-                std::cerr << "Error in poll loop: " << e.what() << std::endl;
-                client_removed = quit_client(i);
+            if (events[i].events & EPOLLIN) {
+                if (events[i].data.fd == _serverSocketFd)
+                    accept_client();
+                else
+                    recv_client(events[i].data.fd);
             }
-            if (!client_removed)
-                ++i;
+            if (events[i].events & EPOLLOUT) {
+                handle_send(events[i].data.fd);
+            }
+
+            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
         }
-        //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
     }
+
+        //sighandler set _running auf false
+
+        // if (_pollfds[0].revents & POLLIN)
+        //     accept_client();
+        // nfds_t i = 1;
+        // while (i < _nfds)
+        // {
+        //     short revents = _pollfds[i].revents;
+        //     bool client_removed = false;
+        //     try
+        //     {
+        //         if (revents & POLLIN)
+        //             client_removed = recv_client(i);
+        //         if (!client_removed && (revents & POLLOUT))
+        //             handle_send(i);
+        //         if (!client_removed && (revents & POLLHUP))
+        //             client_removed = quit_client(i);
+        //     }
+        //     catch (const std::exception &e)
+        //     {
+        //         std::cerr << "Error in poll loop: " << e.what() << std::endl;
+        //         client_removed = quit_client(i);
+        //     }
+        //     if (!client_removed)
+        //         ++i;
+        // }
+        //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
+    // }
     close(_serverSocketFd);
 }

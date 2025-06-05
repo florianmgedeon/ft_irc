@@ -9,7 +9,8 @@
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
-#include <poll.h>
+// #include <poll.h>
+#include <sys/epoll.h>
 #include <sstream>
 #include <string>
 #include <sys/socket.h>
@@ -29,11 +30,14 @@ class Server
         typedef bool(Server::*cmd_t)(std::string&, Client&);
         typedef std::map<std::string, cmd_t> commandMap_t;
         typedef commandMap_t::iterator  commandIter;
+        int                             _serverSocketFd;
         int                             _port;
         std::string                     _password;
-        pollfd                          _pollfds[SOMAXCONN];
-        nfds_t                          _nfds;
-        int                             _serverSocketFd;
+        // pollfd                          _pollfds[SOMAXCONN];
+        int                             _epollfd;
+        struct epoll_event              _ev;
+        int                             _nrEvents;
+        // nfds_t                          _nfds;
         bool                            _running;
         std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
@@ -80,8 +84,9 @@ class Server
         //TODO: refactor to C++ camelCase instead of C under_scores
         void        ft_socket();
         void        accept_client();
-        bool        recv_client(int index);
-        bool        quit_client(int index);
-        void        handle_send(int index);
-
+        // bool        recv_client(int index);
+        void        recv_client(int client_fd);
+        void        quit_client(int client_fd);
+        void        handle_send(int client_fd);
+        bool        hasClient(int fd);
 };

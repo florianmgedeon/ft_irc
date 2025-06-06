@@ -174,8 +174,9 @@ void Server::recv_client(int client_fd)
     if (bytes_received < 0) {
         if (errno == EAGAIN || errno == EWOULDBLOCK)
             return; // nothing to read now
-        else
-            throw std::runtime_error("recv failed");
+        else {
+            std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
+            throw std::runtime_error("recv failed");}
     } else if (bytes_received == 0) {
         std::cout << "recv_client quitting" << std::endl;
         std::string x = "";
@@ -280,7 +281,7 @@ void Server::start()
             if (events[i].events & EPOLLIN) {
                 if (events[i].data.fd == _serverSocketFd)
                     accept_client();
-                else
+                else if (hasClient(events[i].data.fd))
                     recv_client(events[i].data.fd);
             }
             if (events[i].events & EPOLLOUT) {

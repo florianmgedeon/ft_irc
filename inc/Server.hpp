@@ -58,6 +58,7 @@ class Server
         bool		privmsg(std::string &line, Client &c);
         bool		topic(std::string &line, Client &c);
         bool		user(std::string &line, Client &c);
+        bool		who(std::string &line, Client &c);
         bool		quit(std::string &line, Client &c);
 
         void		join_channel(std::string &channelName, Client &c, bool makeOp);

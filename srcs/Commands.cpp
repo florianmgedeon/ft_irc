@@ -33,10 +33,8 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
 			if (comMapIt != _commandMap.end())
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
-			else {
-				Client c = *getClient(fd);
-				c.sendToClient(c.getColNick() + " " + cmd + " :Unknown command");
-			}
+			else
+				getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
 		}
 	}
 	return true;
@@ -340,6 +338,11 @@ bool	Server::user(std::string &line, Client &c) {
 		return (true);
 	}
 	return (false);
+}
+
+bool	Server::who(std::string &line, Client &c) {
+	(void)line; (void)c;
+	return (true);
 }
 
 bool	Server::quit(std::string &line, Client &c) {

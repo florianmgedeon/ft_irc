@@ -1,5 +1,5 @@
 CXX = c++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -Iinc -g
 NAME = ircserv
 INC = inc/Server.hpp inc/Client.hpp inc/Channel.hpp
 SRC = srcs/main.cpp srcs/Server.cpp srcs/Client.cpp srcs/Channel.cpp srcs/Commands.cpp

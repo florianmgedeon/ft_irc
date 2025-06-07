@@ -32,9 +32,12 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
 			if (comMapIt != _commandMap.end())
+			{
+				if (getClientQUIET(fd) == _clients.end())
+					return (false);
 				/*res = */(this->*(comMapIt->second))(line, getClient(fd));	//execute command
-			else
-				getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
+			}
+			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
 		}
 	}
 	return true;

@@ -79,6 +79,7 @@ class Server
         std::vector<Client>::iterator getClient(int fd);
         std::vector<Client>::iterator getClient(const std::string nickname);
         int&		getClientFd(Client &c, int fd);
+        std::vector<Client>::iterator getClientQUIET(int fd);
         void        start();
 
         //TODO: refactor to C++ camelCase instead of C under_scores

@@ -33,10 +33,12 @@ bool	Server::parseClientInput(int fd, std::string buffer) {//check if 1 total co
 			transform(cmd.begin(), cmd.end(), cmd.begin(), ::toupper);
 			commandIter comMapIt = _commandMap.find(cmd);	//find upcased command string in command map
 			if (comMapIt != _commandMap.end())
+			{
+				if (getClientQUIET(fd) == _clients.end())
+					return (false);
 				/*res = */(this->*(comMapIt->second))(line, *getClient(fd));	//execute command
+			}
 			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
-			// if (cmd != "QUIT")
-			// 	getClient(fd)->sendOff();
 		}
 	}
 	return true;
@@ -223,17 +225,15 @@ int Server::getIndexofClient(int fd) {
 }
 
 bool	Server::pass(std::string &line, Client &c) {
-	// if (c.getCapNegotiation() == false)
-		// return (c.sendToClient(c.getColNick() + " 421 PASS :CAP negotiation not finished"), false);
-	if (!line.size())
-		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c.getIsRegistered())
 		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
+	if (!line.size())
+		return (c.sendToClient(c.getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (line == this->getPassword())
 		return (c.setIsPasswordValid(true), true);
 	else 
 	{
-		c.sendToClient(c.getColNick() + " 464 :Password incorrect");
+		c.sendToClient(c.getColNick() + " ERROR: closing connection (Bad Password)");
 		std::string x = "";
 		std::cout << "pass-quit" << std::endl;
 		quit(x, c);

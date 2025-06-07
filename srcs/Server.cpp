@@ -47,6 +47,16 @@ std::vector<Client>::iterator	Server::getClient(int fd) {
 	return i;
 }
 
+std::vector<Client>::iterator	Server::getClientQUIET(int fd) {
+	std::vector<Client>::iterator i = _clients.begin();
+	for (; i != _clients.end(); i++)
+    {
+		if ((*i).getFd() == fd)
+			break;
+    }
+	return i;
+}
+
 std::vector<Client>::iterator	Server::getClient(const std::string nickname) {
 	std::vector<Client>::iterator i = _clients.begin();
 	for (; i != _clients.end(); i++) {
@@ -65,6 +75,8 @@ bool	Server::channelExists(std::string nick) {
 
 void Server::handle_send(int client_fd)
 {
+    if (getClientQUIET(client_fd) == _clients.end())//client quit beforehand
+        return;
     Client &client = *getClient(client_fd);
     size_t total_sent = 0;
     std::cout << "All for send(): " << client.send_buffer << "|" << std::endl;

@@ -1,24 +1,25 @@
 #include "../inc/Server.hpp"
 typedef std::map<std::string, bool(Server::*)(std::string&, std::vector<Client>::iterator)>::iterator commandIter;
 typedef std::map<std::string, Channel>::iterator channelIter;
-//TODO: INVITE OPER MODE
-
-
-//rest commands die net zu operator ghörn
-//ACTION: wird vom client interpretiert und is parameter von privmsg -> funktioniert
-//NOTICE: ka command sondern message die bots für kommunikation verwenden statt privmsg, brauch ma am end net bzw. nur fürn bonus?
-//TIME: nice to have
 
 std::string	tokenize(std::string &line, char c) {
 	std::string res;
-	if (line.find(' ')) {
+//	if (line.find(c) != std::string::npos) { funktioniert aus irgndam grund net... logon hängt
+	if (line.find(c)) {
 		res = line.substr(0, line.find(c));
 		line = line.substr(line.find(c) + 1);
 	}
 	return res;
 }
 
-std::string	strPastColon(std::string &line) {return line.substr(line.find(':') + 1);}
+std::string	strPastColon(std::string &line) {
+	std::string res;
+	if (line.find(':') != std::string::npos)
+		return line.substr(line.find(':') + 1);
+	return res;
+}
+
+void	stripPrefix(std::string &line)		{line = line.substr(1);}
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
@@ -70,7 +71,8 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 
 void	Server::join_channel(std::string &channelName, std::vector<Client>::iterator c) {
 	_channels[channelName].addMember(c->getNickname());
-	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN " + channelName, getClients());
+	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
+	channelName = "#" + channelName;
 	topic(channelName, c);
 	names(channelName, c);
 }
@@ -83,7 +85,7 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 	pwdstream << strPastColon(line);
 
 	while (std::getline(chanNamestream, readName, ',')) {
-		readName = readName.substr(1);
+		stripPrefix(readName);
 		if (_channels.find(readName) == _channels.end()) {	//create channel
 			std::getline(pwdstream, readPwd, ',');
 			if (readPwd.size()) {	//create pw-locked channel
@@ -107,9 +109,11 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
+	std::cout << "line: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 KICK :Not enough parameters"), false);
 	std::string channel = tokenize(line, ' ');
+	stripPrefix(channel);
 	if (!channelExists(channel))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
 	std::string user = tokenize(line, ' ');
@@ -138,10 +142,12 @@ bool	Server::names(std::string &line, std::vector<Client>::iterator c) {
 	std::stringstream linestream;
 	std::string channelName, res;
 	linestream << line;
-	while (std::getline(linestream, channelName, ','))
-		res += c->getColHost() + " 353 " + c->getNickname() + " = " + line + " :" + _channels[channelName].memberlist();
+	while (std::getline(linestream, channelName, ',')) {
+		stripPrefix(channelName);
+		res += c->getColHost() + " 353 " + c->getNickname() + " = #" + channelName + " :" + _channels[channelName].memberlist();
+	}
 	c->sendToClient(res);
-	c->sendToClient(c->getColHost() + " 366 " + c->getNickname() + " " + channelName + " :End of NAMES list");
+	c->sendToClient(c->getColHost() + " 366 " + c->getNickname() + " #" + channelName + " :End of NAMES list");
 	return true;
 }
 
@@ -195,14 +201,14 @@ bool	Server::part(std::string &line, std::vector<Client>::iterator c) {
 	linestream << channels;
 	
 	while (std::getline(linestream, channelName, ',')) {
+		stripPrefix(channelName);
 		if (!channelExists(channelName))
 			c->sendToClient(c->getColNick() + " 403 :No such channel");
 		else if (!_channels[channelName].isMember(c->getNickname()))
-			c->sendToClient(c->getColNick() + " 442 " + channelName + " :You're not on that channel");
+			c->sendToClient(c->getColNick() + " 442 #" + channelName + " :You're not on that channel");
 		else {
-			std::cout << "removing " << c->getNickname() << " r sz " << reason.size() << std::endl;
-			_channels[channelName].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PART " + channelName, getClients());
-			c->sendToClient(c->getNickUserHost() + " PART " + channelName + " :" + reason);
+			_channels[channelName].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PART #" + channelName, getClients());
+			c->sendToClient(c->getNickUserHost() + " PART #" + channelName + " :" + reason);
 			_channels[channelName].removeMember(c->getNickname());
 			if (_channels[channelName].isEmpty())
 				_channels.erase(channelName);
@@ -271,9 +277,10 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 		if (username[0] == '#' || username[0] == '%')
 				toChannel = true;
 		if (toChannel) {
+			stripPrefix(username);
 			if (_channels.find(username) == _channels.end())
 				return (c->sendToClient(c->getColNick() + " 401 :No such channel"), false);
-			_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG " + username + " :" + msg, getClients());
+			_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG #" + username + " :" + msg, getClients());
 		} else {
 			std::vector<Client>::iterator recp = getClient(username);
 			if (recp == _clients.end())
@@ -286,22 +293,26 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
+	std::cout << "topic: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 TOPIC :Not enough parameters"), false);
 	std::string channelName = tokenize(line, ' ');
+	std::string newTopic = strPastColon(line);
+	stripPrefix(channelName);
+	std::cout << "channelName: " << channelName << ", newTopic: " << newTopic << std::endl;
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
-	if (line.find(' ') != std::string::npos) {	//set new topic
+	if (newTopic.size()) {	//set new topic
 		if (!_channels[channelName].isOperator(c->getNickname()))
-			return (c->sendToClient(c->getColNick() + " 482 " + channelName + " :You're not channel operator"), false);
+			return (c->sendToClient(c->getColNick() + " 482 #" + channelName + " :You're not channel operator"), false);
 		line = strPastColon(line);
-		_channels[channelName].setTopic(line, c->getNickname());
-		_channels[channelName].sendChannelMessage("", c->getColHost() + " 332 " + c->getNickname() + " " + channelName + " :" + _channels[channelName].getTopic(), getClients());
-		_channels[channelName].sendChannelMessage("", c->getColHost() + " 333 " + c->getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp(), getClients());
+		_channels[channelName].setTopic(newTopic, c->getNickname());
+		_channels[channelName].sendChannelMessage("", c->getColHost() + " 332 " + c->getNickname() + " #" + channelName + " :" + _channels[channelName].getTopic(), getClients());
+		_channels[channelName].sendChannelMessage("", c->getColHost() + " 333 " + c->getNickname() + " #" + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp(), getClients());
 	} else {									//send back topic if set - maybe this isn't needed for implementation for irssi since the client
 		if (_channels[channelName].hasTopic()) {//never asks for a set topic but returns the internal one from join or last topic change
-			c->sendToClient(c->getColHost() + " 332 " + c->getNickname() + " " + channelName + " :" + _channels[channelName].getTopic());
-			c->sendToClient(c->getColHost() + " 333 " + c->getNickname() + " " + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
+			c->sendToClient(c->getColHost() + " 332 " + c->getNickname() + " #" + channelName + " :" + _channels[channelName].getTopic());
+			c->sendToClient(c->getColHost() + " 333 " + c->getNickname() + " #" + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
 		} else c->sendToClient(c->getColHost() + " 331 :No topic");
 	}
 	return (true);

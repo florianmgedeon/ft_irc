@@ -70,7 +70,6 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 
 void	Server::join_channel(std::string &channelName, std::vector<Client>::iterator c) {
 	_channels[channelName].addMember(c->getNickname());
-//	_channels[channelName].sendChannelMessage(c->getNickname(), c->getColNick() + " JOIN " + channelName);
 	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN " + channelName, getClients());
 	topic(channelName, c);
 	names(channelName, c);
@@ -81,30 +80,27 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
 	chanNamestream << tokenize(line, ' ');
-	pwdstream << line;
+	pwdstream << strPastColon(line);
 
 	while (std::getline(chanNamestream, readName, ',')) {
+		readName = readName.substr(1);
 		if (_channels.find(readName) == _channels.end()) {	//create channel
-			if (readName[0] == '&') {	//create pw-locked channel
-				std::getline(pwdstream, readPwd, ',');
-//				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
+			std::getline(pwdstream, readPwd, ',');
+			if (readPwd.size()) {	//create pw-locked channel
+				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readPwd)));
 				join_channel(readName, c);
-			} else if (readName[0] == '#') {	//create open chanel
-//				std::cout << "creating open channel " << readName << std::endl;
+			} else {	//create open chanel
+				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname())));
 				join_channel(readName, c);
-			} else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false);
+			} //else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false); //TODO: reimplement error
 
 		} else {	//try joining existing channel
-			/*if (_channels[readName].isMemberBanned(c->getNickname()))
-				return (c->sendToClient(c->getColNick() + " " + readName + " 474 :Cannot join channel (+b)"), false);
-			else */if (readName[0] == '&') {	//join pw-locked channel
-				std::getline(pwdstream, readPwd, ',');
-				if (!(_channels[readName].checkPassword(readPwd)))	//BUG: irssi macht leeres chatfenster auf
-					return (c->sendToClient(c->getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
-				else join_channel(readName, c);
-			} else if (readName[0] == '#') join_channel(readName, c);	//join open channel
+			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
+			if (!(_channels[readName].checkPassword(readPwd)))
+				return (c->sendToClient(c->getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
+			join_channel(readName, c);
 		}
 	}
 	return true;

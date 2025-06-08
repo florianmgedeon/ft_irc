@@ -187,7 +187,7 @@ void Server::recv_client(int client_fd)
     }
 
     parsable.append(buffer, bytes_received);
-    std::cout << "All from recv(): " << parsable << "|" << std::endl;
+//    std::cout << "All from recv(): " << parsable << "|" << std::endl;
     parseClientInput(client_fd, parsable);
 }
 
@@ -290,7 +290,7 @@ void Server::start()
                 handle_send(events[i].data.fd);
             }
 
-            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
+//            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
         }
     }
 

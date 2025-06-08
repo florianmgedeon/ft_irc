@@ -27,7 +27,7 @@ class Server
 {
     private:
         //boilerplate for server function
-        typedef bool(Server::*cmd_t)(std::string&, Client&);
+        typedef bool(Server::*cmd_t)(std::string&, std::vector<Client>::iterator);
         typedef std::map<std::string, cmd_t> commandMap_t;
         typedef commandMap_t::iterator  commandIter;
         int                             _serverSocketFd;
@@ -45,26 +45,26 @@ class Server
         commandMap_t                    _commandMap;
 
 //Parsing and commands
-        bool        parseClientInput(int fd, std::string buffer);
+        bool		parseClientInput(int fd, std::string buffer);
 
-        bool		cap(std::string &line, Client &c);
-        bool		invite(std::string &line, Client &c);
-        bool		join(std::string &line, Client &c);
-        bool		kick(std::string &line, Client &c);
-        bool		mode(std::string &line, Client &c);
-        bool		names(std::string &line, Client &c);
-        bool		nick(std::string &line, Client &c);
-        bool		notice(std::string &line, Client &c);
-        bool		part(std::string &line, Client &c);
-        bool		pass(std::string &line, Client &c);
-        bool		ping(std::string &line, Client &c);
-        bool		pong(std::string &line, Client &c);
-        bool		privmsg(std::string &line, Client &c);
-        bool		topic(std::string &line, Client &c);
-        bool		user(std::string &line, Client &c);
-        bool		quit(std::string &line, Client &c);
+        bool		cap		(std::string &line, std::vector<Client>::iterator c);
+        bool		invite	(std::string &line, std::vector<Client>::iterator c);
+        bool		join	(std::string &line, std::vector<Client>::iterator c);
+        bool		kick	(std::string &line, std::vector<Client>::iterator c);
+        bool		mode	(std::string &line, std::vector<Client>::iterator c);
+        bool		names	(std::string &line, std::vector<Client>::iterator c);
+        bool		nick	(std::string &line, std::vector<Client>::iterator c);
+        bool		notice	(std::string &line, std::vector<Client>::iterator c);
+        bool		part	(std::string &line, std::vector<Client>::iterator c);
+        bool		pass	(std::string &line, std::vector<Client>::iterator c);
+        bool		ping	(std::string &line, std::vector<Client>::iterator c);
+        bool		pong	(std::string &line, std::vector<Client>::iterator c);
+        bool		privmsg	(std::string &line, std::vector<Client>::iterator c);
+        bool		topic	(std::string &line, std::vector<Client>::iterator c);
+        bool		user	(std::string &line, std::vector<Client>::iterator c);
+        bool		quit	(std::string &line, std::vector<Client>::iterator c);
 
-        void		join_channel(std::string &channelName, Client &c, bool makeOp);
+        void		join_channel(std::string &channelName, std::vector<Client>::iterator c);
         int         getIndexofClient(int fd);
         bool		channelExists(std::string nick);
 
@@ -78,7 +78,7 @@ class Server
         void setServerName(const std::string &serverName);
         std::vector<Client>::iterator getClient(int fd);
         std::vector<Client>::iterator getClient(const std::string nickname);
-        int&		getClientFd(Client &c, int fd);
+        int&		getClientFd(std::vector<Client>::iterator c, int fd);
         void        start();
 
         //TODO: refactor to C++ camelCase instead of C under_scores
@@ -89,4 +89,8 @@ class Server
         void        quit_client(int client_fd);
         void        handle_send(int client_fd);
         bool        hasClient(int fd);
+
+        std::vector<Client>& getClients() {
+		return _clients;
+	}
 };

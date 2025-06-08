@@ -1,71 +1,93 @@
 #include "../inc/Channel.hpp"
 
 Channel::Channel() {
-	_hasPassword = false;
 	_topicTimestamp = 0;
+	_hasPassword = false;
+	_members.empty();
+	_operators.empty();
 }
 
-Channel::~Channel(){}
+Channel::~Channel() {}
 
-Channel::Channel(std::string pwd): _password(pwd) {
+Channel::Channel(std::string c) {
+	Channel();
+	_members.push_back(c);
+	addOperator(c);
+}
+
+Channel::Channel(std::string c, std::string pwd): _password(pwd) {
+	Channel();
+	_members.push_back(c);
+	addOperator(c);
 	_hasPassword = true;
-	_topicTimestamp = 0;
 }
 
 //----------------------MEMBERS----------------------------
 
-bool Channel::addMember(Client *client, bool makeOp) {
-	if (!isMember(client->getNickname()) && !isMemberBanned(client->getNickname())) {
-		_members.insert(std::make_pair(client->getNickname(), client));
-		if (makeOp)
-			addOperator(client);
-		return true;
-	}
+bool Channel::addMember(std::string c) {
+	if (!isMember(c))
+		return (_members.push_back(c), true);
 	return false;
 }
 
-bool Channel::isMember(std::string nick) {return _members.find(nick) != _members.end();}
+bool Channel::isMember(std::string nick) {
+	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++)
+		if (*it == nick)
+			return true;
+	return false;
+}
 
 void Channel::removeMember(std::string nick) {
-	_members.erase(nick);
+	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++)
+		if (*it == nick)
+			_members.erase(it);
 	if (isOperator(nick))
 		removeOperator(nick);
 }
 
 //--------------------OPERATORS--------------------------
 
-void Channel::addOperator(Client *client) {
-	if (isMember(client->getNickname()) && !isOperator(client->getNickname())) {
-		_operators.insert(std::make_pair(client->getNickname(), client));
-//		std::cout << "added " << client->getNickname() << " to ops" << std::endl;
+void Channel::addOperator(std::string c) {
+	if (isMember(c) && !isOperator(c)) {
+		_operators.push_back(c);
+//		std::cout << "added " << c->getNickname() << " to ops" << std::endl;
 	}
 }
 
-bool Channel::isOperator(std::string nick) {return _operators.find(nick) != _operators.end();}
+bool Channel::isOperator(std::string nick) {
+	for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); it++)
+		if (*it == nick)
+			return true;
+	return false;
+}
 
-void Channel::removeOperator(std::string nick) {_operators.erase(nick);}
+void Channel::removeOperator(std::string nick) {
+	for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); it++)
+		if (*it == nick)
+			_operators.erase(it);
+}
 
 //------------------------------------------------
 
 bool Channel::isEmpty() {return _members.empty();}
 
-void Channel::sendChannelMessage(std::string sender, std::string message) {
-//	std::cout << "channel message: " << message << std::endl;
-	if (!isMemberBanned(sender))
-		for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); ++it)
-			if (it->first != sender)
-				it->second->sendToClient(message);
+void Channel::sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients) {
+//	std::cout << "channel message: " << message << " being sent to " << _members.size() << " clients." << std::endl;
+	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); ++it)
+		if (*it != sender)
+			for (std::vector<Client>::iterator itt = clients.begin(); itt != clients.end(); itt++)
+				if (itt->getNickname() == *it)
+					(*itt).sendToClient(message);
 }
 
-bool	Channel::isMemberBanned(std::string &nick) {return _banlist.find(nick) != _banlist.end();}
 
 bool	Channel::checkPassword(std::string in) {return in == _password ? true : false;}
 
 std::string	Channel::memberlist() {
 	std::string res;
-	for (std::map<std::string, Client *>::iterator it = _members.begin(); it != _members.end(); it++) {
-		if (isOperator(it->first)) res += "@";
-		res = res + it->first + " ";
+	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++) {
+		if (isOperator(*it)) res += "@";
+		res = res + *it + " ";
 	}
 	return res;
 }

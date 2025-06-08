@@ -9,6 +9,7 @@ Client::Client()
     _isRegistered = false;
 	_isUserComplete = false;
 	_isNickValid = false;
+	_epollfd = -1;
 }
 
 Client::~Client()
@@ -16,7 +17,6 @@ Client::~Client()
     // std::cout << "Client destructor called for " << _nickname << std::endl;
 }
 
-// Client::Client(std::string hostname, pollfd *pfd) : _hostname(hostname), _pfd(pfd)
 Client::Client(std::string hostname, struct epoll_event _ev, int epollfd) : _hostname(hostname), _epollfd(epollfd), _ev(_ev) {
 	_nickname = _username = _realname = _servername = "*";
     // _write_ready = false;
@@ -37,46 +37,9 @@ struct epoll_event &Client::getEv()
     return _ev;
 }
 
-// void Client::setWrite(bool write)
-// {
-//     // _write_ready = write;
-//     //NOT NEEDED ANYMORE BECUASE OF EPOLLET at the start:
-//     // if (write == true)
-//     // {
-//     //     _ev.events |= EPOLLOUT;
-//     //     if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
-//     //         throw std::runtime_error("epoll_ctl(MOD) failed");
-//     // }
-//     // else
-//     // {
-//     //     _ev.events = EPOLLIN | EPOLLET | EPOLLHUP;
-//     //     if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
-//     //         throw std::runtime_error("epoll_ctl(MOD) failed");
-//     // }
-// }
-
-// void Client::sendOff()
-// {
-//     while (!send_buffer.empty()) {
-//         ssize_t bytes_sent = send(_ev.data.fd, send_buffer.c_str(), send_buffer.size(), MSG_NOSIGNAL);
-//         if (bytes_sent >= 0) {
-//             std::cout << "Sent to client: " << send_buffer.substr(0, bytes_sent) << std::endl;
-//             send_buffer.erase(0, bytes_sent);
-//         }
-//         else if (bytes_sent == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-//             break;
-//         }
-//         else {
-//             std::cerr << "send() failed on fd " << _ev.data.fd << ": " << strerror(errno) << std::endl;
-//             break;
-//         }
-//     }
-// }
-
 void Client::sendToClient(std::string message)
 {
     send_buffer += message + "\r\n";
-    //add EPOLLOUT
     _ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP;
     if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, _ev.data.fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl(MOD) failed");

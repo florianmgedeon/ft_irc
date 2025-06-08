@@ -4,9 +4,11 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 	_running = true;
 	_serverName = "ircserv";
 	_serverSocketFd = -1;
-    _epollfd = -1;
-    _nrEvents = 0;
-	// _nfds = 0;
+	_epollfd = -1;
+	_nrEvents = 0;
+	_clients.empty();
+	_channels.empty();
+	_commandMap.empty();
 	_commandMap.insert(std::make_pair("CAP",	&Server::cap));
 	_commandMap.insert(std::make_pair("INVITE",	&Server::invite));
 	_commandMap.insert(std::make_pair("JOIN",	&Server::join));
@@ -82,7 +84,7 @@ void Server::handle_send(int client_fd)
             else {
                 std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
                 std::string x = "";
-                quit(x, client);
+                quit(x, getClient(client_fd));
                 return;
             }
         }
@@ -180,7 +182,7 @@ void Server::recv_client(int client_fd)
     } else if (bytes_received == 0) {
         std::cout << "recv_client quitting" << std::endl;
         std::string x = "";
-        quit(x, *getClient(client_fd));
+        quit(x, getClient(client_fd));
         throw std::runtime_error("connection closed by peer");
     }
 
@@ -275,7 +277,7 @@ void Server::start()
                 if (hasClient(events[i].data.fd)) {
                     std::cout << "main loop quitting" << std::endl;
                     std::string x = "";
-                    quit(x, *getClient(events[i].data.fd));
+                    quit(x, getClient(events[i].data.fd));
                 }
             }
             if (events[i].events & EPOLLIN) {

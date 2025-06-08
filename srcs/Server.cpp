@@ -203,54 +203,6 @@ void Server::recv_client(int client_fd)
     parseClientInput(client_fd, parsable);
 }
 
-
-// void Server::recv_client(int client_fd)
-// {
-//     std::cout << "this is recv_client" << std::endl;
-//     char buffer[12];
-//     std::string toParser;
-//     int buffer_size = 12;
-//     bool run = true;
-//     while (run)
-//     {
-//         run = false;
-//         std::cout << "recv_client loop" << std::endl;
-//         memset(buffer, 0, sizeof(buffer));
-//         int bytes_received = recv(client_fd, buffer, buffer_size - 1, 0);
-//         buffer[buffer_size] = '\0';
-
-//         std::cout << "bytes_received: " << bytes_received << std::endl;
-//         if (bytes_received == buffer_size - 1) {
-//             toParser += buffer;
-//             memset(buffer, 0, sizeof(buffer));
-//             run = true;
-//         }
-//         else if (bytes_received > 0) {
-//             toParser += buffer;
-//             memset(buffer, 0, sizeof(buffer));
-
-//             std::cout << "buffer from recv: " << toParser << std::endl;
-//             parseClientInput(client_fd, toParser);
-//         }
-//         else if (bytes_received == 0) {
-//             std::string x = "";
-//             std::cout << "recv-quit" << std::endl;
-//             quit(x, *getClient(client_fd));
-//             return;
-//         }
-//         else {
-//             if (errno == EAGAIN || errno == EWOULDBLOCK) {
-//                 break;
-//             } else {
-//                 std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
-//                 std::string x = "";
-//                 quit(x, *getClient(client_fd));
-//                 return;
-//             }
-//         }
-//     }
-// }
-
 void Server::quit_client(int client_fd)
 {
     if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, client_fd, NULL) == -1)
@@ -305,34 +257,6 @@ void Server::start()
 //            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
         }
     }
-
         //sighandler set _running auf false
-
-        // if (_pollfds[0].revents & POLLIN)
-        //     accept_client();
-        // nfds_t i = 1;
-        // while (i < _nfds)
-        // {
-        //     short revents = _pollfds[i].revents;
-        //     bool client_removed = false;
-        //     try
-        //     {
-        //         if (revents & POLLIN)
-        //             client_removed = recv_client(i);
-        //         if (!client_removed && (revents & POLLOUT))
-        //             handle_send(i);
-        //         if (!client_removed && (revents & POLLHUP))
-        //             client_removed = quit_client(i);
-        //     }
-        //     catch (const std::exception &e)
-        //     {
-        //         std::cerr << "Error in poll loop: " << e.what() << std::endl;
-        //         client_removed = quit_client(i);
-        //     }
-        //     if (!client_removed)
-        //         ++i;
-        // }
-        //std::cout << "Number of clients: " << (_nfds - 1) << std::endl;
-    // }
     close(_serverSocketFd);
 }

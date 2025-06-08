@@ -31,18 +31,11 @@ bool Channel::addMember(std::string c) {
 }
 
 bool Channel::isMember(std::string nick) {
-	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++)
-		if (*it == nick)
-			return true;
-	return false;
+	return std::find(_members.begin(), _members.end(), nick) == _members.end() ? false : true;
 }
 
 void Channel::removeMember(std::string nick) {
-	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++)
-		if (*it == nick) {
-			_members.erase(it);
-			break;
-		}
+	_members.erase(std::find(_members.begin(), _members.end(), nick));
 	if (isOperator(nick))
 		removeOperator(nick);
 }
@@ -52,23 +45,15 @@ void Channel::removeMember(std::string nick) {
 void Channel::addOperator(std::string c) {
 	if (isMember(c) && !isOperator(c)) {
 		_operators.push_back(c);
-//		std::cout << "added " << c->getNickname() << " to ops" << std::endl;
 	}
 }
 
 bool Channel::isOperator(std::string nick) {
-	for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); it++)
-		if (*it == nick)
-			return true;
-	return false;
+	return std::find(_operators.begin(), _operators.end(), nick) == _operators.end() ? false : true;
 }
 
 void Channel::removeOperator(std::string nick) {
-	for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); it++)
-		if (*it == nick) {
-			_operators.erase(it);
-			break;
-		}
+	_operators.erase(std::find(_operators.begin(), _operators.end(), nick));
 }
 
 //------------------------------------------------

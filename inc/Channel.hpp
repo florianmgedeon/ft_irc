@@ -16,26 +16,25 @@ class Channel
         //bool                _inviteOnly;
         //bool                _topicRestricted;
         bool                _hasPassword;
-        std::map<std::string, Client *> _members;
-        std::map<std::string, Client *> _operators;
-        std::map<std::string, Client *> _banlist;//TODO: research how bans are handled and saved überhaupt
+        std::vector<std::string> _members;
+        std::vector<std::string> _operators;
 
     public:
         Channel();
         ~Channel();
-        Channel(std::string pwd);
+        Channel(std::string c);
+        Channel(std::string c, std::string pwd);
 
-        bool addMember(Client *client, bool makeOp);
+        bool addMember(std::string c);
         bool isMember(std::string nick);
         void removeMember(std::string nick);
 
-        void addOperator(Client *client);
+        void addOperator(std::string c);
         bool isOperator(std::string nick);
         void removeOperator(std::string nick);
 
         bool isEmpty();
-        void sendChannelMessage(std::string sender, std::string message);
-        bool isMemberBanned(std::string &nick);
+        void sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients);
         bool checkPassword(std::string in);
 
         const std::string& getTopic() const;

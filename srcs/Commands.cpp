@@ -348,10 +348,15 @@ bool	Server::user(std::string &line, Client &c) {
 		return (c.sendToClient(c.getColNick() + " 462 :You may not reregister"), false);
 	if (username.empty() || hostname.empty() || servername.empty() || realname.empty())
 		return (c.sendToClient(c.getColNick() + " 461 USER :Not enough parameters"), false);
-	if (username.length() > 30 || hostname.length() > 63 || realname.length() > 128)
+	if (username.length() > 30)
+		username = username.substr(0, 30);
+	if (hostname.length() > 63 || realname.length() > 128)
 		return (c.sendToClient(c.getColNick() + " 432 :Erroneous USER parameters"), false);
 	std::string illegal = " \r\n:";
-	if (username.find_first_of(illegal) != std::string::npos)
+	if (username.find_first_of(illegal) != std::string::npos || hostname.find_first_of(illegal) != std::string::npos || servername.find_first_of(illegal) != std::string::npos)
+		return (c.sendToClient(c.getColNick() + " 432 :Erroneous username"), false);
+	illegal = "\r\n:";
+	if (realname.find_first_of(illegal) != std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 :Erroneous username"), false);
 
 	c.setUsername(username);

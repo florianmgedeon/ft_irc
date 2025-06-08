@@ -157,8 +157,9 @@ bool	Server::nick(std::string &line, Client &c) {
 	if (!line.size())
 		return (c.sendToClient(c.getColNick() + " 431 " + c.getNickname() + " :No nickname given"), false);
 
+	//Syntax check
 	const std::string specials = "[]\\`_^{|}";
-	if (line.length() > 30 || (!std::isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
+	if ((!std::isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
     for (size_t j = 1; j < line.length(); ++j)
     {
@@ -169,18 +170,38 @@ bool	Server::nick(std::string &line, Client &c) {
     if (line.find_first_of("0123456789") != std::string::npos && line.find_first_not_of("0123456789") == std::string::npos)
 		return (c.sendToClient(c.getColNick() + " 432 " + line + " :Erroneous nickname"), false);
 
+	//Length check, if long - truncate
+	if (line.length() > 30)
+		line = line.substr(0, 30);
+	//Availability check
 	if (getClient(line) != _clients.end())
 		return (c.sendToClient(c.getColNick() + " 433 " + c.getNickname() + " :Nickname is already in use"), false);
-	c.setNickname(line);
-	c.setIsNickValid(true);
-	// std::cout << "Nickname set to: " << line << std::endl;
+
+	//save previous nickname
+	std::string oldNick = "*";
+	bool nickSet = false;
+	if (c.getIsRegistered())
+		oldNick = c.getNickname();
+	else {
+		c.setNickname(line);
+		c.setIsNickValid(true);
+		nickSet = true;
+	}
+	//Register and/or announce NICK
 	if (c.getCapNegotiation() && c.getIsUserComplete() && !c.getIsRegistered()) {
 		c.setIsRegistered(true);
 		c.sendToClient(":" + c.getServername() + " 001 " + c.getNickname() + " :Welcome to the Internet Relay Network " + c.getNickname() + "!" + c.getUsername() + "@" + c.getHostname());
 		for (size_t i = 0; i < _clients.size(); i++)
 			_clients[i].sendToClient(c.getColNick() + " NICK " + line);
-//		std::cout << "User registered: " << c.getNickname() << std::endl;
 	}
+	if (nickSet)
+		return true;
+
+	//nickname change
+	c.setNickname(line);
+	for (size_t i = 0; i < _clients.size(); i++)
+		_clients[i].sendToClient(":" + oldNick + " NICK :" + c.getNickname());
+
 	return true;
 }
 

@@ -39,8 +39,10 @@ bool Channel::isMember(std::string nick) {
 
 void Channel::removeMember(std::string nick) {
 	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); it++)
-		if (*it == nick)
+		if (*it == nick) {
 			_members.erase(it);
+			break;
+		}
 	if (isOperator(nick))
 		removeOperator(nick);
 }
@@ -63,8 +65,10 @@ bool Channel::isOperator(std::string nick) {
 
 void Channel::removeOperator(std::string nick) {
 	for (std::vector<std::string>::iterator it = _operators.begin(); it != _operators.end(); it++)
-		if (*it == nick)
+		if (*it == nick) {
 			_operators.erase(it);
+			break;
+		}
 }
 
 //------------------------------------------------

@@ -3,7 +3,7 @@ typedef std::map<std::string, bool(Server::*)(std::string&, std::vector<Client>:
 typedef std::map<std::string, Channel>::iterator channelIter;
 
 std::string	tokenize(std::string &line, char c) {
-	std::string res;
+	std::string res; res.clear();
 //	if (line.find(c) != std::string::npos) { funktioniert aus irgndam grund net... logon hängt
 	if (line.find(c)) {
 		res = line.substr(0, line.find(c));
@@ -13,9 +13,9 @@ std::string	tokenize(std::string &line, char c) {
 }
 
 std::string	strPastColon(std::string &line) {
-	std::string res;
+	std::string res; res.clear();
 	if (line.find(':') != std::string::npos)
-		return line.substr(line.find(':') + 1);
+		res = line.substr(line.find(':') + 1);
 	return res;
 }
 
@@ -357,12 +357,14 @@ bool	Server::user(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 {
-	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
-		if (it->second.isMember(it->first))
-		{
-			std::string call = (*it).first + " " + line.substr(1);
-			part(call, c);
+	std::vector<std::string> toPart;
+	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		if (it->second.isMember(c->getNickname())) {
+			std::string call = "#" + (*it).first + " :" + line.substr(1);
+			toPart.push_back(call);
 		}
+	for (std::vector<std::string>::iterator it = toPart.begin(); it != toPart.end(); it++)
+		part(*it, c);
 	quit_client(c->getFd());
 	return true;
 }

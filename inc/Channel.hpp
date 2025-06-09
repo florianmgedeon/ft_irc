@@ -9,6 +9,7 @@ class Client;
 class Channel
 {
     private:
+		std::string 		_name;
         std::string         _topic, _topicSetter;
         time_t				_topicTimestamp;
         std::string         _password;

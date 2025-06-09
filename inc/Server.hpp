@@ -41,6 +41,7 @@ class Server
         bool                            _running;
         std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
+//        std::vector<Channel>            _channels;
         std::string                     _serverName;
         commandMap_t                    _commandMap;
 

@@ -130,10 +130,30 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	return true;
 }
 
-//TODO:mode
+//TODO:mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
-	(void)line; (void)c;
-	return true;
+	if (!line.size())
+		return (c->sendToClient(c->getColNick() +
+			" 461 MODE :Not enough parameters"), false);
+
+	std::string channel = tokenize(line, ' ');
+	std::string modestring = tokenize(line, ' ');
+	std::string argument = tokenize(line, ' ');
+//std::cout <<"channel: " <<channel <<std::endl;
+//std::cout <<"modestring: " <<modestring <<std::endl;
+//std::cout <<"argument: " <<argument <<std::endl;
+	if (!channelExists(channel))
+		return (c->sendToClient(c->getColNick() + 
+			" 403 MODE:No such channel"), false);
+	if (!modestring.size())
+		return false; /*TODO: RPL_CHANNELMODEIS (324),
+			RPL_CREATIONTIME (329)*/
+	
+	if (modestring.size() && !(_channels[channel].isOperator(c->getNickname())))
+		return (c->sendToClient(c->getColNick() + " 482 " + channel
+			+ " :You're not channel operator"), false);
+	
+	return _channels[channel].executeMode(modestring, argument);
 }
 
 bool	Server::names(std::string &line, std::vector<Client>::iterator c) {

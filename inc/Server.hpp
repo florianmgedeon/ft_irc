@@ -9,7 +9,7 @@
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
-// #include <poll.h>
+#include <csignal>
 #include <sys/epoll.h>
 #include <sstream>
 #include <string>

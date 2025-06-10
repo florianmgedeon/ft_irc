@@ -1,5 +1,7 @@
 #include "../inc/Server.hpp"
 
+volatile std::sig_atomic_t g_keep_running = 1;
+
 Server::Server(int port, std::string password) : _port(port), _password(password) {
 	_running = true;
 	_serverName = "ircserv";
@@ -223,16 +225,25 @@ bool Server::hasClient(int fd) {
 	return false;
 }
 
+void signalHandler(int signum)
+{
+    if (signum == SIGINT) {
+        std::cout << " SIGINT received, shutting down server." << std::endl;
+        g_keep_running = 0;
+    }
+}
+
 void Server::start()
 {
+    std::signal(SIGINT, signalHandler);
 	ft_socket();
 	std::cout << "Socket open, awaiting clients." << std::endl;
 	struct epoll_event events[SOMAXCONN];
 //    int nfds;
-    while (_running)
+    while (g_keep_running)
     {
         _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
-        if (_nrEvents == -1)
+        if (_nrEvents == -1 && g_keep_running)
             throw std::runtime_error("epoll_wait() failed");
 
         for (int i = 0; i < _nrEvents; ++i)
@@ -257,6 +268,15 @@ void Server::start()
 //            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
         }
     }
-        //sighandler set _running auf false
     close(_serverSocketFd);
+    std::cout << "Server shutting down." << std::endl;
+    for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+        close(it->getFd());
+    }
+    _clients.clear();
+    if (_epollfd != -1) {
+        close(_epollfd);
+        _epollfd = -1;
+    }
+    std::cout << "Server shutdown complete." << std::endl;
 }

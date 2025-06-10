@@ -143,9 +143,11 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	std::string channel = tokenize(line, ' ');
 	std::string modestring = tokenize(line, ' ');
 	std::string argument = tokenize(line, ' ');
-//std::cout <<"channel: " <<channel <<std::endl;
-//std::cout <<"modestring: " <<modestring <<std::endl;
-//std::cout <<"argument: " <<argument <<std::endl;
+	if (!channel.compare(c->getNickname()) || !channel.compare(modestring))
+		return false;
+std::cout <<"channel: " <<channel <<std::endl;
+std::cout <<"modestring: " <<modestring <<std::endl;
+std::cout <<"argument: " <<argument <<std::endl;
 	if (!channelExists(channel))
 		return (c->sendToClient(c->getColNick() + 
 			" 403 MODE:No such channel"), false);
@@ -156,7 +158,7 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (modestring.size() && !(_channels[channel].isOperator(c->getNickname())))
 		return (c->sendToClient(c->getColNick() + " 482 " + channel
 			+ " :You're not channel operator"), false);
-	
+std::cout <<"executing mode command\n";	
 	return _channels[channel].executeMode(modestring, argument);
 }
 

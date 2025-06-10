@@ -123,7 +123,7 @@ void Server::ft_socket()
     if (_serverSocketFd == -1)
         throw std::runtime_error("socket() failed");
     
-    memset(&server_addr, 0, sizeof(server_addr));
+    std::memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET; //IPv4
     server_addr.sin_port = htons(_port); //port
     server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); //IP address
@@ -184,23 +184,25 @@ void Server::recv_client(int client_fd)
     char buffer[4096];
     std::string parsable;
 
-    memset(buffer, 0, sizeof(buffer));
-    int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+    while(parsable.find("\r\n") == std::string::npos) {
+        std::memset(buffer, 0, sizeof(buffer));
+        int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
 
-    if (bytes_received < 0) {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-            return; // nothing to read now
-        else {
-            std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
-            throw std::runtime_error("recv failed");}
-    } else if (bytes_received == 0) {
-        std::cout << "recv_client quitting" << std::endl;
-        std::string x = "";
-        quit(x, getClient(client_fd));
-        throw std::runtime_error("connection closed by peer");
+        if (bytes_received < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return; // nothing to read now
+            else {
+                std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
+                throw std::runtime_error("recv failed");}
+        } else if (bytes_received == 0) {
+            std::cout << "recv_client quitting" << std::endl;
+            std::string x = "";
+            quit(x, getClient(client_fd));
+            throw std::runtime_error("connection closed by peer");
+        }
+        parsable.append(buffer, bytes_received);
     }
 
-    parsable.append(buffer, bytes_received);
     std::cout << "All from recv(): " << parsable << "|" << std::endl;
     parseClientInput(client_fd, parsable);
 }

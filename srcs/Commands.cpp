@@ -148,7 +148,7 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 //std::cout <<"argument: " <<argument <<std::endl;
 	if (!channelExists(channel))
 		return (c->sendToClient(c->getColNick() + 
-			" 403 MODE:No such channel"), false);
+			" 403 MODE :No such channel"), false);
 	if (!modestring.size())
 		return false; /*TODO: RPL_CHANNELMODEIS (324),
 			RPL_CREATIONTIME (329)*/

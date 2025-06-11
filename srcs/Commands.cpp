@@ -221,9 +221,11 @@ bool	Server::nick(std::string &line, std::vector<Client>::iterator c) {
 		return true;
 
 	//nickname change
+	c->sendToClient(":" + oldNick + " NICK :" + line);
+	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
+		if (it->second.isMember(oldNick))
+			it->second.renameMember(oldNick, line, _clients);
 	c->setNickname(line);
-	for (size_t i = 0; i < _clients.size(); i++)
-		_clients[i].sendToClient(":" + oldNick + " NICK :" + c->getNickname());
 
 	return true;
 }

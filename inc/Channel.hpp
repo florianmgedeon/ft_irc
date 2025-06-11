@@ -44,6 +44,7 @@ class Channel
 	bool executeMode(std::string modestring, std::string argument);
         bool addMember(std::string c);
         bool isMember(std::string nick);
+        void renameMember(std::string oldNick, std::string nick, std::vector<Client> &clients);
         void removeMember(std::string nick);
 
         void addOperator(std::string c);

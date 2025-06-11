@@ -142,6 +142,13 @@ bool Channel::addMember(std::string c) {
 bool Channel::isMember(std::string nick) {
 	return std::find(_members.begin(), _members.end(), nick) == _members.end() ? false : true;
 }
+void Channel::renameMember(std::string oldNick, std::string nick, std::vector<Client> &clients) {
+	std::string msg =":" + oldNick + " NICK :" + nick;
+	sendChannelMessage(oldNick, msg, clients);
+	*std::find(_members.begin(), _members.end(), oldNick) = nick;
+	if (isOperator(oldNick))
+		*std::find(_operators.begin(), _operators.end(), oldNick) = nick;
+}
 
 void Channel::removeMember(std::string nick) {
 	_members.erase(std::find(_members.begin(), _members.end(), nick));
@@ -163,6 +170,8 @@ bool Channel::isOperator(std::string nick) {
 
 void Channel::removeOperator(std::string nick) {
 	_operators.erase(std::find(_operators.begin(), _operators.end(), nick));
+	if (_operators.empty() && !_members.empty())
+		addOperator(*_members.begin());
 }
 
 //------------------------------------------------

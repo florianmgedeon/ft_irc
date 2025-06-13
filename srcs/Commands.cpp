@@ -139,24 +139,32 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 		return (c->sendToClient(c->getColNick() +
 			" 461 MODE :Not enough parameters"), false);
 
-	std::string channel = tokenize(line, ' ');
-	std::string modestring = tokenize(line, ' ');
-	std::string argument = tokenize(line, ' ');
-//std::cout <<"channel: " <<channel <<std::endl;
-//std::cout <<"modestring: " <<modestring <<std::endl;
-//std::cout <<"argument: " <<argument <<std::endl;
-	if (!channelExists(channel))
+	std::istringstream iss(line);
+	std::string token;
+	std::vector<std::string> tokens;
+	while (iss >> token)
+		tokens.push_back(token);
+	
+	if (tokens.size() < 2)
+		return false;
+	if (tokens[0] == c->getColNick().substr(1))
+		return false;
+	if (!channelExists(tokens[0]))
 		return (c->sendToClient(c->getColNick() + 
 			" 403 MODE :No such channel"), false);
-	if (!modestring.size())
-		return false; /*TODO: RPL_CHANNELMODEIS (324),
-			RPL_CREATIONTIME (329)*/
-	
-	if (modestring.size() && !(_channels[channel].isOperator(c->getNickname())))
-		return (c->sendToClient(c->getColNick() + " 482 " + channel
+	if (!(_channels[tokens[0]].isOperator(c->getNickname())))
+		return (c->sendToClient(c->getColNick() + " 482 " + tokens[0]
 			+ " :You're not channel operator"), false);
-	
-	return _channels[channel].executeMode(modestring, argument);
+
+//_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
+
+	//if(tokens[1] == "-l")
+	//	_channels[tokens[0]].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " MODE #" + tokens[0] + " -l", getClients());
+
+//test sendToClient
+//_channels[tokens[0]].sendChannelMessage(c->getNickname(), " MODE " + tokens[0] + " ", getClients());
+
+	return _channels[tokens[0]].executeMode(tokens, c, getClients());
 }
 
 bool	Server::names(std::string &line, std::vector<Client>::iterator c) {

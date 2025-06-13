@@ -61,16 +61,6 @@ std::vector<Client>::iterator	Server::getClientQUIET(int fd) {
 	return i;
 }
 
-std::vector<Client>::iterator	Server::getClientQUIET(int fd) {
-	std::vector<Client>::iterator i = _clients.begin();
-	for (; i != _clients.end(); i++)
-    {
-		if ((*i).getFd() == fd)
-			break;
-    }
-	return i;
-}
-
 std::vector<Client>::iterator	Server::getClient(const std::string nickname) {
 	std::vector<Client>::iterator i = _clients.begin();
 	for (; i != _clients.end(); i++) {

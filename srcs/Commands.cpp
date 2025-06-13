@@ -51,10 +51,9 @@ bool	Server::cap(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "CAP line: <" << line << ">" << std::endl;
 	std::string param = tokenize(line, ' ');
 	if (param == "LS")
-		return (/*c->setCapNegotiation(true), */c->sendToClient(":" + _serverName + " CAP * LS :multi-prefix"), true);
-//	if (param == "LIST")
-	if (param == "REQ")//TODO: parse and actually do request
-		return (c->sendToClient(":" + _serverName + " CAP * ACK :multi-prefix"), true);
+		return (c->sendToClient(":" + _serverName + " CAP * LS :"), true);
+	if (param == "REQ")
+		return (c->sendToClient(":" + _serverName + " CAP * NAK :" + line), true);
 	if (param == "END")
 	{
 		c->setCapNegotiation(true);

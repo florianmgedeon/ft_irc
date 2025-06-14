@@ -5,7 +5,7 @@ typedef std::map<std::string, Channel>::iterator channelIter;
 std::string	tokenize(std::string &line, char c) {
 	std::string res; res.clear();
 //	if (line.find(c) != std::string::npos) { funktioniert aus irgndam grund net... logon hängt
-	if (line.find(c)) {
+	if (line.size() && line.find(c)) {
 		res = line.substr(0, line.find(c));
 		line = line.substr(line.find(c) + 1);
 	}
@@ -14,7 +14,7 @@ std::string	tokenize(std::string &line, char c) {
 
 std::string	strPastColon(std::string &line) {
 	std::string res; res.clear();
-	if (line.find(':') != std::string::npos)
+	if (line.size() && line.find(':') != std::string::npos)
 		res = line.substr(line.find(':') + 1);
 	return res;
 }

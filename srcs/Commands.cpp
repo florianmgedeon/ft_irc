@@ -106,10 +106,18 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
-			if (!(_channels[readName].checkPassword(readPwd)))
+			if (!(_channels[readName].checkPassword(readPwd))){
+join_channel(readName, readPwd ,c);			
+part(readName, c);
+//return false;	
+				
 				return (c->sendToClient("475 " + c->getNickUserHost() 
 					+ " #" + readName + 
 					" :Cannot join channel (+k)"), false);
+			
+			}
+			
+			
 			join_channel(readName, readPwd ,c);
 		}
 	}

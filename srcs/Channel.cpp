@@ -35,13 +35,18 @@ Channel::Channel(std::string c, std::string pwd): _password(pwd) {
 
 //----------------------MEMBERS----------------------------
 
+bool isNumber(std::string& str){
+
+	std::istringstream str2(str);
+	int i;
+	str2 >> std::noskipws >> i;
+	return str2.eof() && !str2.fail();
+}
+
 bool Channel::executeMode(std::vector<std::string> tokens,
 	std::vector<Client>::iterator c, std::vector<Client> &clients){
 	//(void)c;
 	//(void)clients;
-	
-	//_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
-	
 	std::string argument = "";
 	if (tokens.size() > 2)
 		argument = tokens[2];
@@ -83,16 +88,16 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 			return false;
 	}
 	else if (tokens[1] == "+l"){
-		if (atoi(tokens[2].c_str()) > 0 && atoi(tokens[2].c_str()) ==
-		static_cast<int>(atoll(tokens[2].c_str())))
+		if (isNumber(tokens[2]) && atoi(tokens[2].c_str()) > 0 &&
+			atoi(tokens[2].c_str()) == 	
+			static_cast<int>(atoll(tokens[2].c_str())))
 			setUserLimit(atoi(tokens[2].c_str()));
 		else
 			return false;
 	}
-	//sendChannelMessage(c->getNickname(), "TESTMESSAGE MODE", clients);
 	else
 		return false;
-	sendChannelMessage(c->getNickUserHost(), c->getColNick() + " MODE #" +
+	sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " MODE #" +
 		tokens[0] + " " + tokens[1] + " " + argument, clients);
 	return true;
 }
@@ -180,7 +185,7 @@ bool Channel::hasInvite(std::string nick){
 bool Channel::isEmpty() {return _members.empty();}
 
 void Channel::sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients) {
-std::cout <<"sender: " <<sender <<"\n";
+//std::cout <<"sender: " <<sender <<"\n";
 //	std::cout << "channel message: " << message << " being sent to " << _members.size() << " clients." << std::endl;
 	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); ++it)
 		if (*it != sender)

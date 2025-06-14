@@ -65,7 +65,7 @@ class Server
         bool		user	(std::string &line, std::vector<Client>::iterator c);
         bool		quit	(std::string &line, std::vector<Client>::iterator c);
 
-        void		join_channel(std::string &channelName, std::vector<Client>::iterator c);
+        void		join_channel(std::string &channelName, std::string &channelPassword, std::vector<Client>::iterator c);
         int         getIndexofClient(int fd);
         bool		channelExists(std::string nick);
 

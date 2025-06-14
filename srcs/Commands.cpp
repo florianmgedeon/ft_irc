@@ -71,9 +71,11 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 	return true;
 }
 
-void	Server::join_channel(std::string &channelName, std::vector<Client>::iterator c) {
+void	Server::join_channel(std::string &channelName, std::string &channelPassword,
+	std::vector<Client>::iterator c) {
 	_channels[channelName].addMember(c->getNickname());
-	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
+	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
+//std::cout <<"\n\nJOINING CHANNEL \n\n";	
 	channelName = "#" + channelName;
 	topic(channelName, c);
 	names(channelName, c);
@@ -81,11 +83,13 @@ void	Server::join_channel(std::string &channelName, std::vector<Client>::iterato
 
 bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
+
+//std::cout <<"line" <<line <<"_________\n";
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
 	chanNamestream << tokenize(line, ' ');
-	pwdstream << strPastColon(line);
-
+	pwdstream << line;
+	
 	while (std::getline(chanNamestream, readName, ',')) {
 		stripPrefix(readName);
 		if (_channels.find(readName) == _channels.end()) {	//create channel
@@ -93,18 +97,20 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 			if (readPwd.size()) {	//create pw-locked channel
 				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readPwd)));
-				join_channel(readName, c);
+				join_channel(readName, readPwd, c);
 			} else {	//create open chanel
 				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname())));
-				join_channel(readName, c);
+				join_channel(readName, readPwd, c);
 			} //else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false); //TODO: reimplement error
 
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
 			if (!(_channels[readName].checkPassword(readPwd)))
-				return (c->sendToClient(c->getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
-			join_channel(readName, c);
+				return (c->sendToClient("475 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+k)"), false);
+			join_channel(readName, readPwd ,c);
 		}
 	}
 	return true;
@@ -155,14 +161,6 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (!(_channels[tokens[0]].isOperator(c->getNickname())))
 		return (c->sendToClient(c->getColNick() + " 482 " + tokens[0]
 			+ " :You're not channel operator"), false);
-
-//_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
-
-	//if(tokens[1] == "-l")
-	//	_channels[tokens[0]].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " MODE #" + tokens[0] + " -l", getClients());
-
-//test sendToClient
-//_channels[tokens[0]].sendChannelMessage(c->getNickname(), " MODE " + tokens[0] + " ", getClients());
 
 	return _channels[tokens[0]].executeMode(tokens, c, getClients());
 }

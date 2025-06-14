@@ -331,7 +331,8 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 			stripPrefix(username);
 			if (_channels.find(username) == _channels.end())
 				return (c->sendToClient(c->getColNick() + " 401 :No such channel"), false);
-			_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG #" + username + " :" + msg, getClients());
+			if (_channels[username].isMember(c->getNickname()))
+				_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG #" + username + " :" + msg, getClients());
 		} else {
 			std::vector<Client>::iterator recp = getClient(username);
 			if (recp == _clients.end())

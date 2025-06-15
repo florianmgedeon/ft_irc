@@ -73,8 +73,45 @@ bool	Server::cap(std::string &line, std::vector<Client>::iterator c) {
 }
 //TODO: invite
 bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
-	(void)line; (void)c;
-	return true;
+	//(void)line; (void)c;
+
+//syntax: /invite <nickname> <channel> (irssi vervollständigt channel)	
+	if (!line.length())
+		return (c->sendToClient("461 " + c->getColNick() 
+			+ " :Not enough parameters"), false);
+	std::istringstream iss(line);
+	std::string token;
+	std::vector<std::string> tokens;
+	while (iss >> token)
+		tokens.push_back(token);
+	if (tokens.size() < 2 || tokens[1].length() < 2)
+		return (c->sendToClient(c->getColNick() + "461 " + c->getColNick() 
+		+ " " + tokens[0] + " :Not enough parameters"), false);
+//std::cout <<"arg1: " <<tokens[0] <<"|" <<"arg2: " <<tokens[1] <<"|" <<std::endl;
+	if (!channelExists(tokens[1].substr(1)))
+		return (c->sendToClient("403 " + c->getColNick() + " " + tokens[1] 
+			+ " :No such channel"), false);
+	if (!(_channels[tokens[1].substr(1)].isMember(c->getNickname())))
+		return (c->sendToClient("442 " + c->getColNick() + " " + tokens[1]
+			+ " :You're not on that channel"), false);
+	if (!(_channels[tokens[1].substr(1)].isOperator(c->getNickname())))
+		return (c->sendToClient("482 " + c->getColNick() + " " + tokens[1]
+			+ " :You're not channel operator"), false);
+	if ((_channels[tokens[1].substr(1)].isMember(tokens[0])))
+		return (c->sendToClient("443 " + c->getColNick() + " " + tokens[0]
+			+ " " + tokens[1] + " :is already on channel"), false);
+	std::vector<Client>::iterator recp = getClient(tokens[0]);
+	if (recp == _clients.end())
+		return (c->sendToClient(c->getColNick() + " 401 :No such nick"),
+			false);
+	if (_channels[tokens[1].substr(1)].addInvite(tokens[0])){
+		c->sendToClient(c->getNickUserHost() + " INVITE " + tokens[0] + " "
+			+ tokens[1]);
+		(*recp).sendToClient(c->getNickUserHost() + " INVITE "
+			+ tokens[0] + " " + tokens[1]);
+		return true;
+	}
+	return false;
 }
 
 void	Server::join_channel(std::string &channelName, std::string &channelPassword,
@@ -134,13 +171,13 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
-	std::cout << "line: |" << line << "|" << std::endl;
+	//std::cout << "line: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 KICK :Not enough parameters"), false);
 	std::string channel = tokenize(line, ' ');
 	stripPrefix(channel);
 	if (!channelExists(channel))
-		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
+		return (c->sendToClient(c->getNickUserHost() + " 403 :No such channel"), false);
 	std::string user = tokenize(line, ' ');
 	if (!(_channels[channel].isMember(user)))
 		return (c->sendToClient(c->getColNick() + " 441 " + user + " " + channel + " :They aren't on that channel"), false);
@@ -156,11 +193,11 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	return true;
 }
 
-//TODO:mode------------modes: +- i,t,k,o,l
+//mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() +
-			" 461 MODE :Not enough parameters"), false);
+			" 461 :Not enough parameters"), false);
 
 	std::istringstream iss(line);
 	std::string token;
@@ -170,11 +207,12 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	
 	if (tokens.size() < 2 || !tokens[0].length())
 		return false;
+//std::cout <<"MODE arg1: " <<tokens[0] <<"\targ2: " <<tokens[1] <<std::endl;
 	if (tokens[0] == c->getColNick().substr(1))
 		return false;
 	if (!channelExists(tokens[0]))
 		return (c->sendToClient(c->getColNick() + 
-			" 403 MODE :No such channel"), false);
+			" 403 :No such channel"), false);
 	if (!(_channels[tokens[0]].isOperator(c->getNickname())))
 		return (c->sendToClient(c->getColNick() + " 482 " + tokens[0]
 			+ " :You're not channel operator"), false);

@@ -125,6 +125,15 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 	return true;
 }
 
+bool Channel::addInvite(std::string nick){
+	
+	if (std::find(_invites.begin(), _invites.end(), nick) == _invites.end()){	
+		_invites.push_back(nick);
+		return true;
+	}
+	return false;
+}
+
 int Channel::getUserLimit(){
 	return _userLimit;
 }

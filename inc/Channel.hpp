@@ -34,6 +34,7 @@ class Channel
 	void addInvites(std::string invites);
 	//void setHasPassword(bool hasPassword);
 	
+	bool addInvite(std::string nick);
 	int getUserLimit();
 	bool getTopicRestricted();
 	bool checkUserLimit();

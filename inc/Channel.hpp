@@ -16,7 +16,7 @@ class Channel
         int                 _userLimit;
         bool                _inviteOnly;
         bool                _topicRestricted;
-        bool                _hasPassword;
+        //bool                _hasPassword;
         std::vector<std::string> _invites;
         std::vector<std::string> _members;
         std::vector<std::string> _operators;
@@ -32,7 +32,7 @@ class Channel
 	void setUserLimit(int userLimit);
 	void setTopicRestricted (bool topicRestricted);
 	void addInvites(std::string invites);
-	void setHasPassword(bool hasPassword);
+	//void setHasPassword(bool hasPassword);
 	
 	int getUserLimit();
 	bool getTopicRestricted();

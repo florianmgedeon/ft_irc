@@ -15,7 +15,7 @@ Channel::~Channel() {}
 
 Channel::Channel(std::string c) {
 	_userLimit = 0;
-	_hasPassword = false;
+	//_hasPassword = false;
 	_inviteOnly = false;
 	_topicRestricted = false;
 	Channel();
@@ -25,7 +25,7 @@ Channel::Channel(std::string c) {
 
 Channel::Channel(std::string c, std::string pwd): _password(pwd) {
 	_userLimit = 0;
-	_hasPassword = true;
+	//_hasPassword = true;
 	_inviteOnly = false;
 	_topicRestricted = false;
 	Channel();
@@ -52,7 +52,12 @@ bool Channel::checkInvites(std::string nick){
 	return true;
 }
 
-bool Channel::checkUserLimit(){return (static_cast<long unsigned int>(getUserLimit()) < _members.size());}
+bool Channel::checkUserLimit(){
+
+if (!getUserLimit())
+	return true;
+return (static_cast<long unsigned int>(getUserLimit()) > _members.size());
+}
 
 bool Channel::executeMode(std::vector<std::string> tokens,
 	std::vector<Client>::iterator c, std::vector<Client> &clients){
@@ -61,53 +66,60 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 	std::string argument = "";
 	if (tokens.size() > 2)
 		argument = tokens[2];
-	if (tokens[1] == "+i"){
-		setInviteOnly(true);
-	}
-	else if (tokens[1] == "-i"){
-		setInviteOnly(false);
-	}
-	else if (tokens[1] == "+t"){
-		setTopicRestricted(true);
-	}
-	else if (tokens[1] == "-t"){
-		setTopicRestricted(false);
-	}
-	else if (tokens[1] == "-l"){
-		setUserLimit(0);
-	}
-	else if (tokens[1] == "-k"){
-		setPassword("");
-		setHasPassword(false);
-	}
-	else if (tokens.size() < 3)
+	if (tokens[1].length() != 2 || (tokens[1].substr(0, 1) != "+" &&
+		tokens[1].substr(0, 1) != "-" ) )
 		return false;
-	else if (tokens[1] == "+k"){
-		setPassword(tokens[2]);
-		setHasPassword(true);
-	}
-	else if (tokens[1] == "+o"){
-		if (isMember(tokens[2]) && !isOperator(tokens[2]))
-			addOperator(tokens[2]);
-		else
-			return false;
-	}
-	else if (tokens[1] == "-o"){
-		if (isOperator(tokens[2]))
-			removeOperator(tokens[2]);
-		else
-			return false;
-	}
-	else if (tokens[1] == "+l"){
-		if (isNumber(tokens[2]) && atoi(tokens[2].c_str()) > 0 &&
-			atoi(tokens[2].c_str()) == 	
-			static_cast<int>(atoll(tokens[2].c_str())))
-			setUserLimit(atoi(tokens[2].c_str()));
-		else
-			return false;
-	}
-	else
+	
+	char prefix = tokens[1].at(0);
+	char mode = tokens[1].at(1);
+	
+	if ( (mode == 'i' || mode == 't' ||
+		((mode == 'k' || mode == 'l') && prefix == '-')) && argument.length())
 		return false;
+	
+	if ((((mode == 'k' || mode == 'l') && prefix == '+') || mode == 'o')
+		&& !argument.length())
+		return false;
+	switch(mode){
+	
+		case 'i':{
+			prefix == '+' ? setInviteOnly(true) : setInviteOnly(false);
+			break;
+		}
+		case 't':{
+			prefix == '+' ? setTopicRestricted(true) :
+				setTopicRestricted(false);
+			break;
+		}
+		case 'k':{
+			prefix == '+' ? (setPassword(argument)) : setPassword("");
+			break;
+		}
+		case 'o':{
+		
+			if (prefix == '+' && isMember(argument) &&
+				!isOperator(argument))
+				addOperator(argument);
+			else if (prefix == '-' && isOperator(argument) &&
+				argument != c->getNickname())
+				removeOperator(argument);
+			else
+				return false;
+			break;
+		}
+		case 'l':{
+			if (prefix == '+' && isNumber(argument)
+				&& atoi(argument.c_str()) > 0 &&
+				atoi(argument.c_str()) ==
+				static_cast<int>(atoll(argument.c_str())))
+				setUserLimit(atoi(argument.c_str()));
+			else if (prefix == '-')
+				setUserLimit(0);
+			else
+				return false;
+			break;
+		}
+	}
 	sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " MODE #" +
 		tokens[0] + " " + tokens[1] + " " + argument, clients);
 	return true;
@@ -136,12 +148,12 @@ void Channel::setTopicRestricted (bool topicRestricted){
 void Channel::addInvites(std::string invites){
 	_invites.push_back(invites);
 }
-
+/*
 void Channel::setHasPassword(bool hasPassword){
 
 	_hasPassword = hasPassword;
 }
-
+*/
 bool Channel::hasInviteOnly(){
 	return _inviteOnly;
 }

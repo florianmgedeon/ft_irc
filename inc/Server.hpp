@@ -63,6 +63,7 @@ class Server
         bool		privmsg	(std::string &line, std::vector<Client>::iterator c);
         bool		topic	(std::string &line, std::vector<Client>::iterator c);
         bool		user	(std::string &line, std::vector<Client>::iterator c);
+        bool		who		(std::string &line, std::vector<Client>::iterator c);
         bool		quit	(std::string &line, std::vector<Client>::iterator c);
 
         void		join_channel(std::string &channelName, std::vector<Client>::iterator c);

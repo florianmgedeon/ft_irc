@@ -404,6 +404,10 @@ bool	Server::user(std::string &line, std::vector<Client>::iterator c) {
 	}
 	return (false);
 }
+bool	Server::who(std::string &line, std::vector<Client>::iterator c) {
+	(void)line; (void)c;
+	return true;
+}
 
 bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 {

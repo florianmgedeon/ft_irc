@@ -26,6 +26,7 @@ Server::Server(int port, std::string password) : _port(port), _password(password
 	_commandMap.insert(std::make_pair("PRIVMSG",&Server::privmsg));
 	_commandMap.insert(std::make_pair("TOPIC",	&Server::topic));
 	_commandMap.insert(std::make_pair("USER",	&Server::user));
+	_commandMap.insert(std::make_pair("WHO",	&Server::who));
 	_commandMap.insert(std::make_pair("QUIT",	&Server::quit));
 }
 

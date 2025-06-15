@@ -5,7 +5,7 @@ typedef std::map<std::string, Channel>::iterator channelIter;
 std::string	tokenize(std::string &line, char c) {
 	std::string res; res.clear();
 //	if (line.find(c) != std::string::npos) { funktioniert aus irgndam grund net... logon hängt
-	if (line.find(c)) {
+	if (line.size() && line.find(c)) {
 		res = line.substr(0, line.find(c));
 		line = line.substr(line.find(c) + 1);
 	}
@@ -14,12 +14,18 @@ std::string	tokenize(std::string &line, char c) {
 
 std::string	strPastColon(std::string &line) {
 	std::string res; res.clear();
-	if (line.find(':') != std::string::npos)
+	if (line.size() && line.find(':') != std::string::npos)
 		res = line.substr(line.find(':') + 1);
 	return res;
 }
 
-void	stripPrefix(std::string &line)		{line = line.substr(1);}
+void	stripPrefix(std::string &line){
+
+if (!line.length())
+	return;
+line = line.substr(1);
+
+}
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
@@ -67,13 +73,52 @@ bool	Server::cap(std::string &line, std::vector<Client>::iterator c) {
 }
 //TODO: invite
 bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
-	(void)line; (void)c;
-	return true;
+	//(void)line; (void)c;
+
+//syntax: /invite <nickname> <channel> (irssi vervollständigt channel)	
+	if (!line.length())
+		return (c->sendToClient("461 " + c->getColNick() 
+			+ " :Not enough parameters"), false);
+	std::istringstream iss(line);
+	std::string token;
+	std::vector<std::string> tokens;
+	while (iss >> token)
+		tokens.push_back(token);
+	if (tokens.size() < 2 || tokens[1].length() < 2)
+		return (c->sendToClient(c->getColNick() + "461 " + c->getColNick() 
+		+ " " + tokens[0] + " :Not enough parameters"), false);
+//std::cout <<"arg1: " <<tokens[0] <<"|" <<"arg2: " <<tokens[1] <<"|" <<std::endl;
+	if (!channelExists(tokens[1].substr(1)))
+		return (c->sendToClient("403 " + c->getColNick() + " " + tokens[1] 
+			+ " :No such channel"), false);
+	if (!(_channels[tokens[1].substr(1)].isMember(c->getNickname())))
+		return (c->sendToClient("442 " + c->getColNick() + " " + tokens[1]
+			+ " :You're not on that channel"), false);
+	if (!(_channels[tokens[1].substr(1)].isOperator(c->getNickname())))
+		return (c->sendToClient("482 " + c->getColNick() + " " + tokens[1]
+			+ " :You're not channel operator"), false);
+	if ((_channels[tokens[1].substr(1)].isMember(tokens[0])))
+		return (c->sendToClient("443 " + c->getColNick() + " " + tokens[0]
+			+ " " + tokens[1] + " :is already on channel"), false);
+	std::vector<Client>::iterator recp = getClient(tokens[0]);
+	if (recp == _clients.end())
+		return (c->sendToClient(c->getColNick() + " 401 :No such nick"),
+			false);
+	if (_channels[tokens[1].substr(1)].addInvite(tokens[0])){
+		c->sendToClient(c->getNickUserHost() + " INVITE " + tokens[0] + " "
+			+ tokens[1]);
+		(*recp).sendToClient(c->getNickUserHost() + " INVITE "
+			+ tokens[0] + " " + tokens[1]);
+		return true;
+	}
+	return false;
 }
 
-void	Server::join_channel(std::string &channelName, std::vector<Client>::iterator c) {
+void	Server::join_channel(std::string &channelName, std::string &channelPassword,
+	std::vector<Client>::iterator c) {
 	_channels[channelName].addMember(c->getNickname());
-	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getColNick() + " JOIN #" + channelName, getClients());
+	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
+//std::cout <<"\n\nJOINING CHANNEL \n\n";	
 	channelName = "#" + channelName;
 	topic(channelName, c);
 	names(channelName, c);
@@ -81,11 +126,16 @@ void	Server::join_channel(std::string &channelName, std::vector<Client>::iterato
 
 bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
+
+	if (!line.length() || line == ":")
+		return false;
+
+//std::cout <<"line" <<line <<"_________\n";
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
 	chanNamestream << tokenize(line, ' ');
-	pwdstream << strPastColon(line);
-
+	pwdstream << line;
+	
 	while (std::getline(chanNamestream, readName, ',')) {
 		stripPrefix(readName);
 		if (_channels.find(readName) == _channels.end()) {	//create channel
@@ -93,31 +143,41 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 			if (readPwd.size()) {	//create pw-locked channel
 				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readPwd)));
-				join_channel(readName, c);
+				join_channel(readName, readPwd, c);
 			} else {	//create open chanel
 				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname())));
-				join_channel(readName, c);
+				join_channel(readName, readPwd, c);
 			} //else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false); //TODO: reimplement error
 
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
 			if (!(_channels[readName].checkPassword(readPwd)))
-				return (c->sendToClient(c->getColNick() + " " + readName + " 475 :Cannot join channel (+k)"), false);
-			join_channel(readName, c);
+				return (c->sendToClient("475 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+k)"), false);
+			if (!_channels[readName].checkInvites(c->getNickname()))
+				return (c->sendToClient("473 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+i)"), false);
+			if (!_channels[readName].checkUserLimit())
+				return (c->sendToClient("471 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+l)"), false);	
+			join_channel(readName, readPwd ,c);
 		}
 	}
 	return true;
 }
 
 bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
-	std::cout << "line: |" << line << "|" << std::endl;
+	//std::cout << "line: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 KICK :Not enough parameters"), false);
 	std::string channel = tokenize(line, ' ');
 	stripPrefix(channel);
 	if (!channelExists(channel))
-		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
+		return (c->sendToClient(c->getNickUserHost() + " 403 :No such channel"), false);
 	std::string user = tokenize(line, ' ');
 	if (!(_channels[channel].isMember(user)))
 		return (c->sendToClient(c->getColNick() + " 441 " + user + " " + channel + " :They aren't on that channel"), false);
@@ -133,30 +193,31 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	return true;
 }
 
-//TODO:mode------------modes: +- i,t,k,o,l
+//mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() +
-			" 461 MODE :Not enough parameters"), false);
+			" 461 :Not enough parameters"), false);
 
-	std::string channel = tokenize(line, ' ');
-	std::string modestring = tokenize(line, ' ');
-	std::string argument = tokenize(line, ' ');
-//std::cout <<"channel: " <<channel <<std::endl;
-//std::cout <<"modestring: " <<modestring <<std::endl;
-//std::cout <<"argument: " <<argument <<std::endl;
-	if (!channelExists(channel))
+	std::istringstream iss(line);
+	std::string token;
+	std::vector<std::string> tokens;
+	while (iss >> token)
+		tokens.push_back(token);
+	
+	if (tokens.size() < 2 || !tokens[0].length())
+		return false;
+//std::cout <<"MODE arg1: " <<tokens[0] <<"\targ2: " <<tokens[1] <<std::endl;
+	if (tokens[0] == c->getColNick().substr(1))
+		return false;
+	if (!channelExists(tokens[0]))
 		return (c->sendToClient(c->getColNick() + 
-			" 403 MODE :No such channel"), false);
-	if (!modestring.size())
-		return false; /*TODO: RPL_CHANNELMODEIS (324),
-			RPL_CREATIONTIME (329)*/
-	
-	if (modestring.size() && !(_channels[channel].isOperator(c->getNickname())))
-		return (c->sendToClient(c->getColNick() + " 482 " + channel
+			" 403 :No such channel"), false);
+	if (!(_channels[tokens[0]].isOperator(c->getNickname())))
+		return (c->sendToClient(c->getColNick() + " 482 " + tokens[0]
 			+ " :You're not channel operator"), false);
-	
-	return _channels[channel].executeMode(modestring, argument);
+
+	return _channels[tokens[0]].executeMode(tokens, c, getClients());
 }
 
 bool	Server::names(std::string &line, std::vector<Client>::iterator c) {
@@ -325,7 +386,8 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 			stripPrefix(username);
 			if (_channels.find(username) == _channels.end())
 				return (c->sendToClient(c->getColNick() + " 401 :No such channel"), false);
-			_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG #" + username + " :" + msg, getClients());
+			if (_channels[username].isMember(c->getNickname()))
+				_channels[username].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PRIVMSG #" + username + " :" + msg, getClients());
 		} else {
 			std::vector<Client>::iterator recp = getClient(username);
 			if (recp == _clients.end())
@@ -348,7 +410,8 @@ bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
 	if (newTopic.size()) {	//set new topic
-		if (!_channels[channelName].isOperator(c->getNickname()))
+		if (!_channels[channelName].isOperator(c->getNickname()) &&
+			_channels[channelName].getTopicRestricted())
 			return (c->sendToClient(c->getColNick() + " 482 #" + channelName + " :You're not channel operator"), false);
 		line = strPastColon(line);
 		_channels[channelName].setTopic(newTopic, c->getNickname());
@@ -414,7 +477,13 @@ bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 	std::vector<std::string> toPart;
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		if (it->second.isMember(c->getNickname())) {
-			std::string call = "#" + (*it).first + " :" + line.substr(1);
+			std::string line_substr;
+			if (!line.length())
+				line_substr = "";
+			else
+				line_substr = line.substr(1);
+			std::string call = "#" + (*it).first + " :" + line_substr;
+			//std::string call = "#" + (*it).first + " :" + line.substr(1);
 			toPart.push_back(call);
 		}
 	for (std::vector<std::string>::iterator it = toPart.begin(); it != toPart.end(); it++)

@@ -43,6 +43,17 @@ bool isNumber(std::string& str){
 	return str2.eof() && !str2.fail();
 }
 
+bool Channel::checkInvites(std::string nick){
+
+	if (!hasInviteOnly())
+		return true;
+	if (std::find(_invites.begin(), _invites.end(), nick) == _invites.end())
+		return false;
+	return true;
+}
+
+bool Channel::checkUserLimit(){return (static_cast<long unsigned int>(getUserLimit()) < _members.size());}
+
 bool Channel::executeMode(std::vector<std::string> tokens,
 	std::vector<Client>::iterator c, std::vector<Client> &clients){
 	//(void)c;
@@ -134,6 +145,8 @@ void Channel::setHasPassword(bool hasPassword){
 bool Channel::hasInviteOnly(){
 	return _inviteOnly;
 }
+
+bool Channel::getTopicRestricted(){return _topicRestricted;}
 
 bool Channel::addMember(std::string c) {
 	if (!isMember(c))

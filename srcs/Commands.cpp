@@ -19,7 +19,13 @@ std::string	strPastColon(std::string &line) {
 	return res;
 }
 
-void	stripPrefix(std::string &line)		{line = line.substr(1);}
+void	stripPrefix(std::string &line){
+
+if (!line.length())
+	return;
+line = line.substr(1);
+
+}
 
 bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
@@ -84,6 +90,9 @@ void	Server::join_channel(std::string &channelName, std::string &channelPassword
 bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
 
+	if (!line.length() || line == ":")
+		return false;
+
 //std::cout <<"line" <<line <<"_________\n";
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
@@ -106,18 +115,18 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
-			if (!(_channels[readName].checkPassword(readPwd))){
-join_channel(readName, readPwd ,c);			
-part(readName, c);
-//return false;	
-				
+			if (!(_channels[readName].checkPassword(readPwd)))
 				return (c->sendToClient("475 " + c->getNickUserHost() 
 					+ " #" + readName + 
 					" :Cannot join channel (+k)"), false);
-			
-			}
-			
-			
+			if (!_channels[readName].checkInvites(c->getNickname()))
+				return (c->sendToClient("473 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+i)"), false);
+			if (!_channels[readName].checkUserLimit())
+				return (c->sendToClient("471 " + c->getNickUserHost() 
+					+ " #" + readName + 
+					" :Cannot join channel (+l)"), false);	
 			join_channel(readName, readPwd ,c);
 		}
 	}
@@ -159,7 +168,7 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	while (iss >> token)
 		tokens.push_back(token);
 	
-	if (tokens.size() < 2)
+	if (tokens.size() < 2 || !tokens[0].length())
 		return false;
 	if (tokens[0] == c->getColNick().substr(1))
 		return false;
@@ -363,7 +372,8 @@ bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
 	if (newTopic.size()) {	//set new topic
-		if (!_channels[channelName].isOperator(c->getNickname()))
+		if (!_channels[channelName].isOperator(c->getNickname()) ||
+			_channels[channelName].getTopicRestricted())
 			return (c->sendToClient(c->getColNick() + " 482 #" + channelName + " :You're not channel operator"), false);
 		line = strPastColon(line);
 		_channels[channelName].setTopic(newTopic, c->getNickname());
@@ -425,7 +435,13 @@ bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 	std::vector<std::string> toPart;
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		if (it->second.isMember(c->getNickname())) {
-			std::string call = "#" + (*it).first + " :" + line.substr(1);
+			std::string line_substr;
+			if (!line.length())
+				line_substr = "";
+			else
+				line_substr = line.substr(1);
+			std::string call = "#" + (*it).first + " :" + line_substr;
+			//std::string call = "#" + (*it).first + " :" + line.substr(1);
 			toPart.push_back(call);
 		}
 	for (std::vector<std::string>::iterator it = toPart.begin(); it != toPart.end(); it++)

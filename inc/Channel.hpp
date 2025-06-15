@@ -30,11 +30,14 @@ class Channel
 	void setInviteOnly(bool inviteOnly);
 	void setPassword(std::string password);
 	void setUserLimit(int userLimit);
-	void setTopicRestricted (bool topicRestricted);	
+	void setTopicRestricted (bool topicRestricted);
 	void addInvites(std::string invites);
 	void setHasPassword(bool hasPassword);
-	int getUserLimit();
 	
+	int getUserLimit();
+	bool getTopicRestricted();
+	bool checkUserLimit();
+	bool checkInvites(std::string nick);
 	bool executeMode(std::vector<std::string> tokens, std::vector<Client>::iterator c, std::vector<Client> &clients);
         bool addMember(std::string c);
         bool isMember(std::string nick);

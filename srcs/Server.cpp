@@ -97,6 +97,8 @@ void Server::handle_send(int client_fd)
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
             else {
+                if (!client.getIsRegistered())
+                    return;
                 std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
                 std::string x = "";
                 quit(x, getClient(client_fd));

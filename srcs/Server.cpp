@@ -228,17 +228,18 @@ bool Server::hasClient(int fd) {
 	return false;
 }
 
-void signalHandler(int signum)
-{
+void signalHandler(int signum) {
     if (signum == SIGINT) {
-        std::cout << " SIGINT received, shutting down server." << std::endl;
-        g_keep_running = 0;
-    }
+        std::cout << " SIGINT received, shutting down server." << std::endl;}
+    else if (signum == SIGQUIT) {
+        std::cout << " SIGQUIT received, shutting down server." << std::endl;}
+    g_keep_running = 0;
 }
 
 void Server::start()
 {
     std::signal(SIGINT, signalHandler);
+    std::signal(SIGQUIT, signalHandler);
 	ft_socket();
 	std::cout << "Socket open, awaiting clients." << std::endl;
 	struct epoll_event events[SOMAXCONN];

@@ -229,7 +229,7 @@ void Channel::sendChannelMessage(std::string sender, std::string message, std::v
 }
 
 
-bool	Channel::checkPassword(std::string in) {return in == _password ? true : false;}
+bool	Channel::checkPassword(std::string in) {return in == _password || !_password.length();}
 
 std::string	Channel::memberlist() {
 	std::string res;

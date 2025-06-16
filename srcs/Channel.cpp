@@ -74,10 +74,10 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 	char mode = tokens[1].at(1);
 	
 	if ( (mode == 'i' || mode == 't' ||
-		((mode == 'k' || mode == 'l') && prefix == '-')) && argument.length())
+		((mode == 'l') && prefix == '-')) && argument.length())
 		return false;
 	
-	if ((((mode == 'k' || mode == 'l') && prefix == '+') || mode == 'o')
+	if ((((mode == 'l') && prefix == '+') || mode == 'o' || mode == 'k')
 		&& !argument.length())
 		return false;
 	switch(mode){

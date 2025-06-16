@@ -168,16 +168,17 @@ void Server::accept_client()
     fcntl(client_fd, F_SETFL, O_NONBLOCK);
     std::string hostname(inet_ntoa(client_addr.sin_addr));
 
-    //epoll CHANGE:
-//    if (_totalnumberfds >= SOMAXCONN)
-//        throw std::runtime_error("Too many clients");
+    if (_clients.size() >= 4000) {
+        std::cerr << "Maximum number of clients reached, refusing new connection." << std::endl;
+        close(client_fd);
+        return;
+    }
     struct epoll_event _ev;
     _ev.events = EPOLLIN | EPOLLOUT | EPOLLHUP | EPOLLRDHUP;
     _ev.data.fd = client_fd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, client_fd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() for new client failed");
     _clients.push_back(Client(hostname, _ev,_epollfd));
-//    _nrEvents++;
 }
 
 void Server::recv_client(int client_fd)
@@ -221,7 +222,6 @@ void Server::quit_client(int client_fd)
     if (it != _clients.end())
         _clients.erase(it);
     close(client_fd);
-//    _nrEvents--;
     std::cout << "Client disconnected" << std::endl;
 }
 
@@ -247,7 +247,6 @@ void Server::start()
 	ft_socket();
 	std::cout << "Socket open, awaiting clients." << std::endl;
 	struct epoll_event events[SOMAXCONN];
-//    int nfds;
     while (g_keep_running)
     {
         _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
@@ -272,8 +271,6 @@ void Server::start()
             if (events[i].events & EPOLLOUT) {
                 handle_send(events[i].data.fd);
             }
-
-//            std::cout << "this loop done with i: " << i << "--------------------------------" << std::endl;
         }
     }
     close(_serverSocketFd);

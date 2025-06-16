@@ -33,7 +33,6 @@ class Server
         int                             _serverSocketFd;
         int                             _port;
         std::string                     _password;
-        // pollfd                          _pollfds[SOMAXCONN];
         int                             _epollfd;
         struct epoll_event              _ev;
         int                             _nrEvents;

@@ -79,6 +79,8 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 	//(void)line; (void)c;
 
 //syntax: /invite <nickname> <channel> (irssi vervollständigt channel)	
+	if (!c->getIsRegistered())
+		return (false);
 	if (!line.length())
 		return (c->sendToClient("461 " + c->getColNick() 
 			+ " :Not enough parameters"), false);
@@ -119,6 +121,8 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 
 void	Server::join_channel(std::string &channelName, std::string &channelPassword,
 	std::vector<Client>::iterator c) {
+	if (!c->getIsRegistered())
+		return;
 	_channels[channelName].addMember(c->getNickname());
 	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
 //std::cout <<"\n\nJOINING CHANNEL \n\n";	
@@ -130,6 +134,8 @@ void	Server::join_channel(std::string &channelName, std::string &channelPassword
 bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "join inb4: |" << line << "|" << std::endl;
 
+	if (!c->getIsRegistered())
+		return (false);
 	if (!line.length() || line == ":")
 		return false;
 
@@ -175,6 +181,8 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	//std::cout << "line: |" << line << "|" << std::endl;
+	if (!c->getIsRegistered())
+		return (false);
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 KICK :Not enough parameters"), false);
 	std::string channel = tokenize(line, ' ');
@@ -198,6 +206,8 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 
 //mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
+	if (!c->getIsRegistered())
+		return (false);
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() +
 			" 461 :Not enough parameters"), false);
@@ -225,6 +235,8 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::names(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "line: |" << line << "|" << std::endl;
+	if (!c->getIsRegistered())
+		return (false);
 	std::stringstream linestream;
 	std::string channelName, res;
 	linestream << line;
@@ -299,6 +311,8 @@ bool	Server::notice(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::part(std::string &line, std::vector<Client>::iterator c) {
+	if (!c->getIsRegistered())
+		return (false);
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 PART :Not enough parameters"), false);
 	std::stringstream linestream;
@@ -334,8 +348,6 @@ int Server::getIndexofClient(int fd) {
 }
 
 bool	Server::pass(std::string &line, std::vector<Client>::iterator c) {
-	// if (c->getCapNegotiation() == false)
-		// return (c->sendToClient(c->getColNick() + " 421 PASS :CAP negotiation not finished"), false);
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 PASS :Not enough parameters"), false);
 	if (c->getIsRegistered())
@@ -354,6 +366,8 @@ bool	Server::pass(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::ping(std::string &line, std::vector<Client>::iterator c)//for when server gets ping from client
 {
+	if (!c->getIsRegistered())
+		return (false);
 	if (line.empty())
 		return (c->sendToClient(c->getColNick() + " 409 :No origin specified"), false);
 	c->sendToClient(":" + _serverName + " PONG " + line);
@@ -367,6 +381,8 @@ bool	Server::pong(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 //	std::cout << "msg: |" << line << "|" << std::endl;
+	if (!c->getIsRegistered())
+		return (false);
 	std::stringstream namestream;
 	std::string username, users, msg;
 	users =  tokenize(line, ' ');
@@ -403,6 +419,8 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
+	if (!c->getIsRegistered())
+		return (false);
 	std::cout << "topic: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 TOPIC :Not enough parameters"), false);
@@ -477,6 +495,8 @@ bool	Server::who(std::string &line, std::vector<Client>::iterator c) {
 
 bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 {
+	if (!c->getIsRegistered())
+		return (false);
 	std::vector<std::string> toPart;
 	for (std::map<std::string, Channel>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		if (it->second.isMember(c->getNickname())) {

@@ -53,6 +53,13 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 	return true;
 }
 
+void	Server::invalidJoin(std::vector<Client>::iterator c, std::string channel){
+
+	//_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
+	c->sendToClient(c->getNickUserHost() + " JOIN #" + channel);
+	c->sendToClient(c->getNickUserHost() + " PART #" + channel);
+}
+
 
 //---------------------------COMMANDS------------------------------------------
 
@@ -162,16 +169,16 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
 			if (!(_channels[readName].checkPassword(readPwd)))
-				return (c->sendToClient("475 " + c->getNickUserHost() 
-					+ " #" + readName + 
+				return (invalidJoin(c, readName), c->sendToClient("475 "
+					+ c->getNickUserHost() + " #" + readName + 
 					" :Cannot join channel (+k)"), false);
 			if (!_channels[readName].checkInvites(c->getNickname()))
-				return (c->sendToClient("473 " + c->getNickUserHost() 
-					+ " #" + readName + 
+				return (invalidJoin(c, readName), c->sendToClient("473 "
+					+ c->getNickUserHost() + " #" + readName + 
 					" :Cannot join channel (+i)"), false);
 			if (!_channels[readName].checkUserLimit())
-				return (c->sendToClient("471 " + c->getNickUserHost() 
-					+ " #" + readName + 
+				return (invalidJoin(c, readName), c->sendToClient("471 "
+					+ c->getNickUserHost() + " #" + readName + 
 					" :Cannot join channel (+l)"), false);	
 			join_channel(readName, readPwd ,c);
 		}
@@ -206,18 +213,20 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 
 //mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
+	if (line[0] != '#')
+		return false;
 	if (!c->getIsRegistered())
 		return (false);
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() +
-			" 461 :Not enough parameters"), false);
+			" 461 MODE :Not enough parameters"), false);
 
 	std::istringstream iss(line);
 	std::string token;
 	std::vector<std::string> tokens;
 	while (iss >> token)
 		tokens.push_back(token);
-	
+	stripPrefix(tokens[0]);
 	if (tokens.size() < 2 || !tokens[0].length())
 		return false;
 //std::cout <<"MODE arg1: " <<tokens[0] <<"\targ2: " <<tokens[1] <<std::endl;

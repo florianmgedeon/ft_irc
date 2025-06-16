@@ -72,6 +72,7 @@ class Server
     public:
         Server(int port, std::string password);
         ~Server();
+        void invalidJoin(std::vector<Client>::iterator c, std::string channel);
         int         getPort() const;
         const std::string &getPassword() const;
         void        setRunning(bool running);

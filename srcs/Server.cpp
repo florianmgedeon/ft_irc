@@ -112,7 +112,7 @@ void Server::handle_send(int client_fd)
         struct epoll_event ev = client.getEv();
         ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;
         if (epoll_ctl(_epollfd, EPOLL_CTL_MOD, client.getFd(), &ev) == -1)
-            std::cerr << "epoll_ctl(MOD) failed to disable EPOLLOUT\n";
+            throw std::runtime_error("epoll_ctl(MOD) failed to disable EPOLLOUT");
     }
 }
 
@@ -143,11 +143,6 @@ void Server::ft_socket()
     if (listen(_serverSocketFd, SOMAXCONN) == -1)
         throw std::runtime_error("listen() failed");
 
-    // _nfds = 1;
-    // memset(_pollfds, 0, sizeof(_pollfds));
-    // _pollfds[0].fd = _serverSocketFd;
-    // _pollfds[0].events = POLLIN | POLLHUP | POLLOUT;
-    //epoll CHANGE:
     _epollfd = epoll_create1(0);
     if (_epollfd == -1)
         throw std::runtime_error("epoll_create1() failed");
@@ -155,7 +150,6 @@ void Server::ft_socket()
     _ev.data.fd = _serverSocketFd;
     if (epoll_ctl(_epollfd, EPOLL_CTL_ADD, _serverSocketFd, &_ev) == -1)
         throw std::runtime_error("epoll_ctl() failed");
-//    _totalnumberfds++;
 }
 
 void Server::accept_client()
@@ -216,7 +210,7 @@ void Server::recv_client(int client_fd)
 void Server::quit_client(int client_fd)
 {
     if (epoll_ctl(_epollfd, EPOLL_CTL_DEL, client_fd, NULL) == -1)
-        std::cerr << "epoll_ctl DEL failed for fd " << client_fd << std::endl;
+        throw std::runtime_error("epoll_ctl(DEL) failed for client_fd");
         
     std::vector<Client>::iterator it = getClient(client_fd);
     if (it != _clients.end())
@@ -244,35 +238,41 @@ void Server::start()
 {
     std::signal(SIGINT, signalHandler);
     std::signal(SIGQUIT, signalHandler);
-	ft_socket();
-	std::cout << "Socket open, awaiting clients." << std::endl;
-	struct epoll_event events[SOMAXCONN];
-    while (g_keep_running)
-    {
-        _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
-        if (_nrEvents == -1 && g_keep_running)
-            throw std::runtime_error("epoll_wait() failed");
 
-        for (int i = 0; i < _nrEvents; ++i)
+    try {
+        ft_socket();
+        std::cout << "Socket open, awaiting clients." << std::endl;
+        struct epoll_event events[SOMAXCONN];
+        while (g_keep_running)
         {
-            if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
-                if (hasClient(events[i].data.fd)) {
-                    std::cout << "main loop quitting" << std::endl;
-                    std::string x = "";
-                    quit(x, getClient(events[i].data.fd));
+            _nrEvents = epoll_wait(_epollfd, events, SOMAXCONN, -1);
+            if (_nrEvents == -1 && g_keep_running)
+                throw std::runtime_error("epoll_wait() failed");
+
+            for (int i = 0; i < _nrEvents; ++i)
+            {
+                if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
+                    if (hasClient(events[i].data.fd)) {
+                        std::cout << "main loop quitting" << std::endl;
+                        std::string x = "";
+                        quit(x, getClient(events[i].data.fd));
+                    }
+                }
+                if (events[i].events & EPOLLIN) {
+                    if (events[i].data.fd == _serverSocketFd)
+                        accept_client();
+                    else if (hasClient(events[i].data.fd))
+                        recv_client(events[i].data.fd);
+                }
+                if (events[i].events & EPOLLOUT) {
+                    handle_send(events[i].data.fd);
                 }
             }
-            if (events[i].events & EPOLLIN) {
-                if (events[i].data.fd == _serverSocketFd)
-                    accept_client();
-                else if (hasClient(events[i].data.fd))
-                    recv_client(events[i].data.fd);
-            }
-            if (events[i].events & EPOLLOUT) {
-                handle_send(events[i].data.fd);
-            }
         }
+    } catch (const std::exception &e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
     }
+
     close(_serverSocketFd);
     std::cout << "Server shutting down." << std::endl;
     for (std::vector<Client>::iterator it = _clients.begin(); it != _clients.end(); ++it) {

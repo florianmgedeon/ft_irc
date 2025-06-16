@@ -47,6 +47,9 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 			else getClient(fd)->sendToClient(getClient(fd)->getColNick() + " " + cmd + " :Unknown command");
 		}
 	}
+	if (getClientQUIET(fd) == _clients.end())
+		return (false);
+	getClientQUIET(fd)->_parsable.clear();
 	return true;
 }
 

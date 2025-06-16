@@ -24,6 +24,7 @@ class Client
     public:
         std::string send_buffer;
         std::string recv_buffer;
+        std::string _parsable;
         Client(std::string hostname, struct epoll_event _ev, int epollfd);
         // Client(std::string hostname, pollfd *pfd);
         Client();

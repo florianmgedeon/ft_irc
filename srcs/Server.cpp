@@ -183,15 +183,19 @@ void Server::accept_client()
 void Server::recv_client(int client_fd)
 {
     char buffer[4096];
-    std::string parsable;
+    std::vector<Client>::iterator it = getClient(client_fd);
 
-    while(parsable.find("\r\n") == std::string::npos) {
+    while(it->_parsable.find("\r\n") == std::string::npos) {
         std::memset(buffer, 0, sizeof(buffer));
         int bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
 
         if (bytes_received < 0) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK)
-                return; // nothing to read now
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (it->_parsable.find("\r\n") != std::string::npos)
+                {
+                    break;
+                }
+                return;} // nothing to read now
             else {
                 std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
                 throw std::runtime_error("recv failed");}
@@ -201,11 +205,11 @@ void Server::recv_client(int client_fd)
             quit(x, getClient(client_fd));
             throw std::runtime_error("connection closed by peer");
         }
-        parsable.append(buffer, bytes_received);
+        it->_parsable.append(buffer, bytes_received);
     }
 
-    std::cout << "All from recv(): " << parsable << "|" << std::endl;
-    parseClientInput(client_fd, parsable);
+    std::cout << "All from recv(): " << it->_parsable << "|" << std::endl;
+    parseClientInput(client_fd, it->_parsable);
 }
 
 void Server::quit_client(int client_fd)

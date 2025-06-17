@@ -107,7 +107,6 @@ void Server::handle_send(int client_fd)
 
     if (total_sent > 0)
         client.send_buffer.erase(0, total_sent);
-    //remove EPOLLOUT
     if (client.send_buffer.empty()) {
         struct epoll_event ev = client.getEv();
         ev.events = EPOLLIN | EPOLLHUP | EPOLLRDHUP;

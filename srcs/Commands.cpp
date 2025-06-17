@@ -248,7 +248,6 @@ bool	Server::nick(std::string &line, std::vector<Client>::iterator c) {
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 431 " + c->getNickname() + " :No nickname given"), false);
 
-	//Syntax check
 	const std::string specials = "[]\\`_^{|}";
 	if ((!std::isalpha(line[0]) && specials.find(line[0]) == std::string::npos) || line.find_first_of(" \r\n") != std::string::npos)
 		return (c->sendToClient(c->getColNick() + " 432 " + line + " :Erroneous nickname"), false);
@@ -261,14 +260,11 @@ bool	Server::nick(std::string &line, std::vector<Client>::iterator c) {
     if (line.find_first_of("0123456789") != std::string::npos && line.find_first_not_of("0123456789") == std::string::npos)
 		return (c->sendToClient(c->getColNick() + " 432 " + line + " :Erroneous nickname"), false);
 
-	//Length check, if long - truncate
 	if (line.length() > 30)
 		line = line.substr(0, 30);
-	//Availability check
 	if (getClient(line) != _clients.end())
 		return (c->sendToClient(c->getColNick() + " 433 " + c->getNickname() + " :Nickname is already in use"), false);
 
-	//save previous nickname
 	std::string oldNick = "*";
 	bool nickSet = false;
 	if (c->getIsRegistered())
@@ -278,7 +274,6 @@ bool	Server::nick(std::string &line, std::vector<Client>::iterator c) {
 		c->setIsNickValid(true);
 		nickSet = true;
 	}
-	//Register and/or announce NICK
 	if (c->getCapNegotiation() && c->getIsUserComplete() && !c->getIsRegistered()) {
 		c->setIsRegistered(true);
 		c->sendToClient(":" + c->getServername() + " 001 " + c->getNickname() + " :Welcome to the Internet Relay Network " + c->getNickname() + "!" + c->getUsername() + "@" + c->getHostname());
@@ -288,7 +283,6 @@ bool	Server::nick(std::string &line, std::vector<Client>::iterator c) {
 	if (nickSet)
 		return true;
 
-	//nickname change
 	c->sendToClient(":" + oldNick + " NICK :" + line);
 	for (channelIter it = _channels.begin(); it != _channels.end(); it++)
 		if (it->second.isMember(oldNick))
@@ -386,8 +380,8 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 	while (std::getline(namestream, username, ',')) {
 		bool toChannel = false;
 		while (std::strchr("@%", username[0])) {
-			if (username[0] == '@') username = username.substr(1); //TODO: send to channel ops
-			else if (username[0] == '%') username = username.substr(1); //TODO: send to channel ops
+			if (username[0] == '@') username = username.substr(1);
+			else if (username[0] == '%') username = username.substr(1);
 		}
 		if (username[0] == '#' || username[0] == '%')
 				toChannel = true;
@@ -417,7 +411,7 @@ bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 	stripPrefix(channelName);
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
-	if (newTopic.size()) {	//set new topic
+	if (newTopic.size()) {
 		if (!(_channels[channelName].isMember(c->getNickname())))
 			return (c->sendToClient("442 " + c->getColNick() + " "
 			+ channelName + " :You're not on that channel"), false);
@@ -428,8 +422,8 @@ bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 		_channels[channelName].setTopic(newTopic, c->getNickname());
 		_channels[channelName].sendChannelMessage("", c->getColHost() + " 332 " + c->getNickname() + " #" + channelName + " :" + _channels[channelName].getTopic(), getClients());
 		_channels[channelName].sendChannelMessage("", c->getColHost() + " 333 " + c->getNickname() + " #" + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp(), getClients());
-	} else {									//send back topic if set - maybe this isn't needed for implementation for irssi since the client
-		if (_channels[channelName].hasTopic()) {//never asks for a set topic but returns the internal one from join or last topic change
+	} else {
+		if (_channels[channelName].hasTopic()) {
 			c->sendToClient(c->getColHost() + " 332 " + c->getNickname() + " #" + channelName + " :" + _channels[channelName].getTopic());
 			c->sendToClient(c->getColHost() + " 333 " + c->getNickname() + " #" + channelName + " " + _channels[channelName].getTopicSetter() + " " + _channels[channelName].getTopicTimestamp());
 		} else c->sendToClient(c->getColHost() + " 331 :No topic");
@@ -494,7 +488,6 @@ bool	Server::quit(std::string &line, std::vector<Client>::iterator c)
 			else
 				line_substr = line.substr(1);
 			std::string call = "#" + (*it).first + " :" + line_substr;
-			//std::string call = "#" + (*it).first + " :" + line.substr(1);
 			toPart.push_back(call);
 		}
 	for (std::vector<std::string>::iterator it = toPart.begin(); it != toPart.end(); it++)

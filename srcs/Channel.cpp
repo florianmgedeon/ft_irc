@@ -165,12 +165,7 @@ void Channel::setTopicRestricted (bool topicRestricted){
 void Channel::addInvites(std::string invites){
 	_invites.push_back(invites);
 }
-/*
-void Channel::setHasPassword(bool hasPassword){
 
-	_hasPassword = hasPassword;
-}
-*/
 bool Channel::hasInviteOnly(){
 	return _inviteOnly;
 }

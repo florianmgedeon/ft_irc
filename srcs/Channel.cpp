@@ -40,6 +40,18 @@ bool isNumber(std::string& str){
 	return str2.eof() && !str2.fail();
 }
 
+void Channel::lastOp(std::vector<Client>::iterator c, std::vector<Client> &clients){
+
+	if (_members.size() > 1 && isOperator(c->getNickname())
+	&& _operators.size() == 1){
+			std::string client = _members[0];
+		if (_members[0] == c->getNickname())
+			client = _members[1];
+		sendChannelMessage(c->getNickname(), c->getNickUserHost() + " MODE #" +
+			_name + " +o " + client, clients);
+	}
+}
+
 bool Channel::checkInvites(std::string nick){
 
 	if (!hasInviteOnly())
@@ -99,7 +111,7 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 				addOperator(argument);
 			else if (prefix == '-' && isOperator(argument) &&
 				argument != c->getNickname()) {
-				removeOperator(argument, clients);
+				removeOperator(argument);
 			}
 			else
 				return false;
@@ -184,10 +196,10 @@ void Channel::renameMember(std::string oldNick, std::string nick, std::vector<Cl
 		*std::find(_operators.begin(), _operators.end(), oldNick) = nick;
 }
 
-void Channel::removeMember(std::string nick, std::vector<Client> &clients) {
+void Channel::removeMember(std::string nick) {
 	_members.erase(std::find(_members.begin(), _members.end(), nick));
 	if (isOperator(nick))
-		removeOperator(nick, clients);
+		removeOperator(nick);
 }
 
 //--------------------OPERATORS--------------------------
@@ -202,12 +214,10 @@ bool Channel::isOperator(std::string nick) {
 	return std::find(_operators.begin(), _operators.end(), nick) == _operators.end() ? false : true;
 }
 
-void Channel::removeOperator(std::string nick, std::vector<Client> &clients) {
+void Channel::removeOperator(std::string nick) {
 	_operators.erase(std::find(_operators.begin(), _operators.end(), nick));
-	if (_operators.empty() && !_members.empty()) {
+	if (_operators.empty() && !_members.empty())
 		addOperator(*_members.begin());
-		sendChannelMessage("", ":" + *_members.begin() + " MODE #" + _name + " +o " + *_members.begin(), clients);
-	}
 }
 
 //------------------------------------------------

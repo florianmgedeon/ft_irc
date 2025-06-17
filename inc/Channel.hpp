@@ -27,6 +27,7 @@ class Channel
         Channel(std::string c, std::string name);
         Channel(std::string c, std::string name, std::string pwd);
 
+	void lastOp(std::vector<Client>::iterator c, std::vector<Client> &clients);
 	void setInviteOnly(bool inviteOnly);
 	void setPassword(std::string password);
 	void setUserLimit(int userLimit);
@@ -43,11 +44,11 @@ class Channel
 	bool addMember(std::string c);
 	bool isMember(std::string nick);
 	void renameMember(std::string oldNick, std::string nick, std::vector<Client> &clients);
-	void removeMember(std::string nick, std::vector<Client> &clients);
+	void removeMember(std::string nick);
 
 	void addOperator(std::string c);
 	bool isOperator(std::string nick);
-	void removeOperator(std::string nick, std::vector<Client> &clients);
+	void removeOperator(std::string nick);
 
 	bool isEmpty();
 	void sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients);

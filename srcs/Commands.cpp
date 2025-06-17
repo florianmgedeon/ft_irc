@@ -439,6 +439,9 @@ bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
 	if (newTopic.size()) {	//set new topic
+		if (!(_channels[channelName].isMember(c->getNickname())))
+			return (c->sendToClient("442 " + c->getColNick() + " "
+			+ channelName + " :You're not on that channel"), false);
 		if (!_channels[channelName].isOperator(c->getNickname()) &&
 			_channels[channelName].getTopicRestricted())
 			return (c->sendToClient(c->getColNick() + " 482 #" + channelName + " :You're not channel operator"), false);

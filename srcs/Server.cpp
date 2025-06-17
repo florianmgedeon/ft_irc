@@ -198,12 +198,23 @@ void Server::recv_client(int client_fd)
                 throw std::runtime_error("recv failed");}
         } else if (bytes_received == 0) {
             std::cout << "recv_client quitting" << std::endl;
+            if (!it->getIsRegistered()) {
+                quit_client(client_fd);
+                return;}
             std::string x = "";
             quit(x, getClient(client_fd));
             throw std::runtime_error("connection closed by peer");
         }
         it->_parsable.append(buffer, bytes_received);
-    }
+        size_t crlf_pos = it->_parsable.find("\r\n");
+        if (crlf_pos != std::string::npos && crlf_pos > 510) {
+            std::cerr << "Error: Client message too long, disconnecting fd " << client_fd << std::endl;
+            if (!it->getIsRegistered()) {
+                quit_client(client_fd);
+                return;}
+            std::string x = "";
+            quit(x, it);}
+   }
 
     std::cout << "All from recv(): " << it->_parsable << "|" << std::endl;
     parseClientInput(client_fd, it->_parsable);

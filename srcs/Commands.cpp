@@ -197,6 +197,8 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	if (!channelExists(channel))
 		return (c->sendToClient(c->getNickUserHost() + " 403 :No such channel"), false);
 	std::string user = tokenize(line, ' ');
+	if (user == c->getNickname())
+		return false;
 	if (!(_channels[channel].isMember(user)))
 		return (c->sendToClient(c->getColNick() + " 441 " + user + " " + channel + " :They aren't on that channel"), false);
 	if (!(_channels[channel].isMember(c->getNickname())))
@@ -204,9 +206,8 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	if (!(_channels[channel].isOperator(c->getNickname())))
 		return (c->sendToClient(c->getColNick() + " 482 " + channel + " :You're not channel operator"), false);
 	std::string reason = strPastColon(line);
-
 	getClient(user)->sendToClient(c->getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
-	_channels[channel].removeMember(user, _clients);
+	_channels[channel].removeMember(user);
 	_channels[channel].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " KICK " + channel + " " + user, getClients());
 	return true;
 }
@@ -339,9 +340,10 @@ bool	Server::part(std::string &line, std::vector<Client>::iterator c) {
 		else if (!_channels[channelName].isMember(c->getNickname()))
 			c->sendToClient(c->getColNick() + " 442 #" + channelName + " :You're not on that channel");
 		else {
+			_channels[channelName].lastOp(c, getClients());
 			_channels[channelName].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PART #" + channelName, getClients());
 			c->sendToClient(c->getNickUserHost() + " PART #" + channelName + " :" + reason);
-			_channels[channelName].removeMember(c->getNickname(), _clients);
+			_channels[channelName].removeMember(c->getNickname());
 			if (_channels[channelName].isEmpty())
 				_channels.erase(channelName);
 		}

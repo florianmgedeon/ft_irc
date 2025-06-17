@@ -8,14 +8,11 @@ class Client
         std::string _nickname;
         std::string _username;
         std::string _realname;
-        // int         _serverSocketFd;
         std::string _hostname;
         std::string _servername;
-        // bool        _write_ready;
         bool        _capNegotiation;
         bool        _isPasswordValid;
         bool        _isRegistered;
-        // pollfd      *_pfd;
         bool        _isUserComplete;
         bool        _isNickValid;
         int         _epollfd;
@@ -26,12 +23,9 @@ class Client
         std::string recv_buffer;
         std::string _parsable;
         Client(std::string hostname, struct epoll_event _ev, int epollfd);
-        // Client(std::string hostname, pollfd *pfd);
         Client();
         ~Client();
-        // void        setWrite(bool write);
         int         getFd() const;
-        // void		sendOff();
         void        sendToClient(std::string message);
         void        recvFromClient(char *buffer);
         void        setNickname(std::string nickname);

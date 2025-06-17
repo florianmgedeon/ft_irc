@@ -70,8 +70,6 @@ return (static_cast<long unsigned int>(getUserLimit()) > _members.size());
 
 bool Channel::executeMode(std::vector<std::string> tokens,
 	std::vector<Client>::iterator c, std::vector<Client> &clients){
-	//(void)c;
-	//(void)clients;
 	std::string argument = "";
 	if (tokens.size() > 2)
 		argument = tokens[2];
@@ -229,8 +227,6 @@ bool Channel::hasInvite(std::string nick){
 bool Channel::isEmpty() {return _members.empty();}
 
 void Channel::sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients) {
-//std::cout <<"sender: " <<sender <<"\n";
-//	std::cout << "channel message: " << message << " being sent to " << _members.size() << " clients." << std::endl;
 	for (std::vector<std::string>::iterator it = _members.begin(); it != _members.end(); ++it)
 		if (*it != sender)
 			for (std::vector<Client>::iterator itt = clients.begin(); itt != clients.end(); itt++)

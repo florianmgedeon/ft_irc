@@ -4,7 +4,6 @@ typedef std::map<std::string, Channel>::iterator channelIter;
 
 std::string	tokenize(std::string &line, char c) {
 	std::string res; res.clear();
-//	if (line.find(c) != std::string::npos) { funktioniert aus irgndam grund net... logon hängt
 	if (line.size() && line.find(c)) {
 		res = line.substr(0, line.find(c));
 		line = line.substr(line.find(c) + 1);
@@ -31,7 +30,6 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 	std::string line, dummy;
 	std::stringstream streamline;
 	streamline << buffer;
-//	bool res = true;
 	while (std::getline(streamline, line, '\r')) {
 		std::getline(streamline, dummy, '\n');
 		if (!dummy.size()) {
@@ -55,7 +53,6 @@ bool	Server::parseClientInput(int fd, std::string buffer) {
 
 void	Server::invalidJoin(std::vector<Client>::iterator c, std::string channel){
 
-	//_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
 	c->sendToClient(c->getNickUserHost() + " JOIN #" + channel);
 	c->sendToClient(c->getNickUserHost() + " PART #" + channel);
 }
@@ -64,7 +61,6 @@ void	Server::invalidJoin(std::vector<Client>::iterator c, std::string channel){
 //---------------------------COMMANDS------------------------------------------
 
 bool	Server::cap(std::string &line, std::vector<Client>::iterator c) {
-//	std::cout << "CAP line: <" << line << ">" << std::endl;
 	std::string param = tokenize(line, ' ');
 	if (param == "LS")
 		return (c->sendToClient(":" + _serverName + " CAP * LS :"), true);
@@ -81,11 +77,7 @@ bool	Server::cap(std::string &line, std::vector<Client>::iterator c) {
 	}
 	return (true);
 }
-//TODO: invite
 bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
-	//(void)line; (void)c;
-
-//syntax: /invite <nickname> <channel> (irssi vervollständigt channel)	
 	if (!c->getIsRegistered())
 		return (false);
 	if (!line.length())
@@ -99,7 +91,6 @@ bool	Server::invite(std::string &line, std::vector<Client>::iterator c) {
 	if (tokens.size() < 2 || tokens[1].length() < 2)
 		return (c->sendToClient(c->getColNick() + "461 " + c->getColNick() 
 		+ " " + tokens[0] + " :Not enough parameters"), false);
-//std::cout <<"arg1: " <<tokens[0] <<"|" <<"arg2: " <<tokens[1] <<"|" <<std::endl;
 	if (!channelExists(tokens[1].substr(1)))
 		return (c->sendToClient("403 " + c->getColNick() + " " + tokens[1] 
 			+ " :No such channel"), false);
@@ -132,21 +123,18 @@ void	Server::join_channel(std::string &channelName, std::string &channelPassword
 		return;
 	_channels[channelName].addMember(c->getNickname());
 	_channels[channelName].sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " JOIN #" + channelName + " " + channelPassword, getClients());
-//std::cout <<"\n\nJOINING CHANNEL \n\n";	
 	channelName = "#" + channelName;
 	topic(channelName, c);
 	names(channelName, c);
 }
 
 bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
-//	std::cout << "join inb4: |" << line << "|" << std::endl;
 
 	if (!c->getIsRegistered())
 		return (false);
 	if (!line.length() || line == ":")
 		return false;
 
-//std::cout <<"line" <<line <<"_________\n";
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
 	if (line.find(' ') != std::string::npos){
@@ -160,14 +148,12 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 		if (_channels.find(readName) == _channels.end()) {	//create channel
 			std::getline(pwdstream, readPwd, ',');
 			if (readPwd.size()) {	//create pw-locked channel
-				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readName, readPwd)));
 				join_channel(readName, readPwd, c);
 			} else {	//create open chanel
-				std::cout << "creating open channel " << readName << std::endl;
 				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readName)));
 				join_channel(readName, readPwd, c);
-			} //else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false); //TODO: reimplement error
+			}
 
 		} else {	//try joining existing channel
 			std::getline(pwdstream, readPwd, ',');	//join pw-locked channel
@@ -190,7 +176,6 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
-	//std::cout << "line: |" << line << "|" << std::endl;
 	if (!c->getIsRegistered())
 		return (false);
 	if (!line.size())
@@ -215,7 +200,6 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	return true;
 }
 
-//mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (!c->getIsRegistered())
 	return (false);
@@ -233,9 +217,6 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	stripPrefix(tokens[0]);
 	if (tokens.size() < 2 || !tokens[0].length())
 		return false;
-//std::cout <<"MODE arg1: " <<tokens[0] <<"\targ2: " <<tokens[1] <<std::endl;
-	// if (tokens[0] == c->getColNick().substr(1))
-	// 	return false;
 	if (!channelExists(tokens[0]))
 		return (c->sendToClient(c->getColNick() + 
 			" 403 :No such channel"), false);
@@ -247,7 +228,6 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::names(std::string &line, std::vector<Client>::iterator c) {
-//	std::cout << "line: |" << line << "|" << std::endl;
 	if (!c->getIsRegistered())
 		return (false);
 	std::stringstream linestream;
@@ -333,7 +313,6 @@ bool	Server::part(std::string &line, std::vector<Client>::iterator c) {
 	
 	channels = tokenize(line, ' ');
 	reason = strPastColon(line);
-//	std::cout << "line: |" << line << "|" << std::endl;
 	linestream << channels;
 	
 	while (std::getline(linestream, channelName, ',')) {
@@ -370,14 +349,13 @@ bool	Server::pass(std::string &line, std::vector<Client>::iterator c) {
 		return (c->setIsPasswordValid(true), true);
 	else 
 	{
-		std::cout << "pass-quit" << std::endl;
 		c->sendToClient(c->getColNick() + " 464 :Password incorrect");
 		quit_client(c->getFd());
 		return (false);
 	}
 }
 
-bool	Server::ping(std::string &line, std::vector<Client>::iterator c)//for when server gets ping from client
+bool	Server::ping(std::string &line, std::vector<Client>::iterator c)
 {
 	if (!c->getIsRegistered())
 		return (false);
@@ -393,7 +371,6 @@ bool	Server::pong(std::string &line, std::vector<Client>::iterator c) {
 }
 
 bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
-//	std::cout << "msg: |" << line << "|" << std::endl;
 	if (!c->getIsRegistered())
 		return (false);
 	std::stringstream namestream;
@@ -424,7 +401,6 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 			std::vector<Client>::iterator recp = getClient(username);
 			if (recp == _clients.end())
 				return (c->sendToClient(c->getColNick() + " 401 :No such nick"), false);
-//			std::cout << c->getNickname() << " sending privmsg to " << (*recp).getNickname() << ": " << msg << std::endl;
 			(*recp).sendToClient(c->getNickUserHost() + " PRIVMSG " + (*recp).getNickname() + " :" + msg);
 		}
 	}
@@ -434,13 +410,11 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 bool	Server::topic(std::string &line, std::vector<Client>::iterator c) {
 	if (!c->getIsRegistered())
 		return (false);
-	std::cout << "topic: |" << line << "|" << std::endl;
 	if (!line.size())
 		return (c->sendToClient(c->getColNick() + " 461 TOPIC :Not enough parameters"), false);
 	std::string channelName = tokenize(line, ' ');
 	std::string newTopic = strPastColon(line);
 	stripPrefix(channelName);
-	std::cout << "channelName: " << channelName << ", newTopic: " << newTopic << std::endl;
 	if (!channelExists(channelName))
 		return (c->sendToClient(c->getColNick() + " 403 :No such channel"), false);
 	if (newTopic.size()) {	//set new topic
@@ -472,7 +446,6 @@ bool	Server::user(std::string &line, std::vector<Client>::iterator c) {
 	std::getline(streamline, servername, ' ');
 	std::getline(streamline, dummy, ':');
 	std::getline(streamline, realname, '\0');
-	// std::cout << "getIsPasswordValid: "<< c->getIsPasswordValid() << std::endl;
 	if (c->getIsPasswordValid() == false)
 		return (false);
 	if (c->getIsRegistered())
@@ -499,7 +472,6 @@ bool	Server::user(std::string &line, std::vector<Client>::iterator c) {
 	{
 		c->setIsRegistered(true);
 		c->sendToClient(":" + _serverName + " 001 " + c->getNickname() + " :Welcome to the Internet Relay Network " + c->getNickname() + "!" + c->getUsername() + "@" + c->getHostname());
-		// std::cout << "User registered: " << username << std::endl;
 		return (true);
 	}
 	return (false);

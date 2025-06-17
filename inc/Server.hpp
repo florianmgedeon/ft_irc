@@ -26,7 +26,6 @@ class Client;
 class Server
 {
     private:
-        //boilerplate for server function
         typedef bool(Server::*cmd_t)(std::string&, std::vector<Client>::iterator);
         typedef std::map<std::string, cmd_t> commandMap_t;
         typedef commandMap_t::iterator  commandIter;
@@ -36,15 +35,12 @@ class Server
         int                             _epollfd;
         struct epoll_event              _ev;
         int                             _nrEvents;
-        // nfds_t                          _nfds;
         bool                            _running;
         std::vector<Client>             _clients;
         std::map<std::string, Channel>  _channels;
-//        std::vector<Channel>            _channels;
         std::string                     _serverName;
         commandMap_t                    _commandMap;
 
-//Parsing and commands
         bool		parseClientInput(int fd, std::string buffer);
 
         bool		cap		(std::string &line, std::vector<Client>::iterator c);
@@ -84,10 +80,8 @@ class Server
         std::vector<Client>::iterator getClientQUIET(int fd);
         void        start();
 
-        //TODO: refactor to C++ camelCase instead of C under_scores
         void        ft_socket();
         void        accept_client();
-        // bool        recv_client(int index);
         void        recv_client(int client_fd);
         void        quit_client(int client_fd);
         void        handle_send(int client_fd);

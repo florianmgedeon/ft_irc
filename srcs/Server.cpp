@@ -84,7 +84,6 @@ void Server::handle_send(int client_fd)
         return;
     Client &client = *getClient(client_fd);
     size_t total_sent = 0;
-    std::cout << "All for send(): " << client.send_buffer << "|" << std::endl;
 
     while (!client.send_buffer.empty()) {
         int bytes_sent = send(client.getFd(), client.send_buffer.c_str() + total_sent,
@@ -99,7 +98,6 @@ void Server::handle_send(int client_fd)
             else {
                 if (!client.getIsRegistered())
                     return;
-                std::cout << "handle_send quitting: errno=" << errno << " (" << std::strerror(errno) << ")" << std::endl;
                 std::string x = "";
                 quit(x, getClient(client_fd));
                 return;
@@ -197,7 +195,6 @@ void Server::recv_client(int client_fd)
                 std::cerr << "recv() failed on fd " << client_fd << ": " << std::strerror(errno) << std::endl;
                 throw std::runtime_error("recv failed");}
         } else if (bytes_received == 0) {
-            std::cout << "recv_client quitting" << std::endl;
             if (!it->getIsRegistered()) {
                 quit_client(client_fd);
                 return;}
@@ -216,7 +213,6 @@ void Server::recv_client(int client_fd)
             quit(x, it);}
    }
 
-    std::cout << "All from recv(): " << it->_parsable << "|" << std::endl;
     parseClientInput(client_fd, it->_parsable);
 }
 
@@ -229,7 +225,6 @@ void Server::quit_client(int client_fd)
     if (it != _clients.end())
         _clients.erase(it);
     close(client_fd);
-    std::cout << "Client disconnected" << std::endl;
 }
 
 bool Server::hasClient(int fd) {
@@ -266,7 +261,6 @@ void Server::start()
             {
                 if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
                     if (hasClient(events[i].data.fd)) {
-                        std::cout << "main loop quitting" << std::endl;
                         std::string x = "";
                         quit(x, getClient(events[i].data.fd));
                     }

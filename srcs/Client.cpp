@@ -3,7 +3,6 @@
 Client::Client()
 {
 	_nickname = _username = _realname = _hostname = _servername = "*";
-    // _write_ready = false;
     _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;
@@ -14,12 +13,10 @@ Client::Client()
 
 Client::~Client()
 {
-    // std::cout << "Client destructor called for " << _nickname << std::endl;
 }
 
 Client::Client(std::string hostname, struct epoll_event _ev, int epollfd) : _hostname(hostname), _epollfd(epollfd), _ev(_ev) {
 	_nickname = _username = _realname = _servername = "*";
-    // _write_ready = false;
     _capNegotiation = false;
     _isPasswordValid = false;
     _isRegistered = false;

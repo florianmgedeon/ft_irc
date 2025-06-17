@@ -2,7 +2,7 @@
 
 int checkPort(char *av)
 {
-    long port = strtol(av, NULL, 0);
+    long port = std::strtol(av, NULL, 0);
     if (port < 1024 || port > 65535)
     {
         throw std::invalid_argument("Port must be between 1024 and 65535");
@@ -20,7 +20,7 @@ int main (int ac, char **av)
     try
     {
         int port = checkPort(av[1]);
-        if (strlen(av[2]) == 0)
+        if (std::strlen(av[2]) == 0)
             throw std::invalid_argument("Password cannot be empty");
         Server server(port, av[2]);
         server.start();

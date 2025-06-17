@@ -231,8 +231,8 @@ bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
 	if (tokens.size() < 2 || !tokens[0].length())
 		return false;
 //std::cout <<"MODE arg1: " <<tokens[0] <<"\targ2: " <<tokens[1] <<std::endl;
-	if (tokens[0] == c->getColNick().substr(1))
-		return false;
+	// if (tokens[0] == c->getColNick().substr(1))
+	// 	return false;
 	if (!channelExists(tokens[0]))
 		return (c->sendToClient(c->getColNick() + 
 			" 403 :No such channel"), false);
@@ -405,7 +405,7 @@ bool	Server::privmsg(std::string &line, std::vector<Client>::iterator c) {
 	namestream << users;
 	while (std::getline(namestream, username, ',')) {
 		bool toChannel = false;
-		while (strchr("@%", username[0])) {
+		while (std::strchr("@%", username[0])) {
 			if (username[0] == '@') username = username.substr(1); //TODO: send to channel ops
 			else if (username[0] == '%') username = username.substr(1); //TODO: send to channel ops
 		}

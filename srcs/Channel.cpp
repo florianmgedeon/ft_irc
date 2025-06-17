@@ -119,10 +119,10 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 		}
 		case 'l':{
 			if (prefix == '+' && isNumber(argument)
-				&& atoi(argument.c_str()) > 0 &&
-				atoi(argument.c_str()) ==
-				static_cast<int>(atoll(argument.c_str())))
-				setUserLimit(atoi(argument.c_str()));
+				&& std::atoi(argument.c_str()) > 0 &&
+				std::atoi(argument.c_str()) ==
+				static_cast<int>(std::atoll(argument.c_str())))
+				setUserLimit(std::atoi(argument.c_str()));
 			else if (prefix == '-')
 				setUserLimit(0);
 			else

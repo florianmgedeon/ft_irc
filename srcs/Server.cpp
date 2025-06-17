@@ -99,7 +99,7 @@ void Server::handle_send(int client_fd)
             else {
                 if (!client.getIsRegistered())
                     return;
-                std::cout << "handle_send quitting: errno=" << errno << " (" << strerror(errno) << ")" << std::endl;
+                std::cout << "handle_send quitting: errno=" << errno << " (" << std::strerror(errno) << ")" << std::endl;
                 std::string x = "";
                 quit(x, getClient(client_fd));
                 return;
@@ -194,7 +194,7 @@ void Server::recv_client(int client_fd)
                 }
                 return;} // nothing to read now
             else {
-                std::cerr << "recv() failed on fd " << client_fd << ": " << strerror(errno) << std::endl;
+                std::cerr << "recv() failed on fd " << client_fd << ": " << std::strerror(errno) << std::endl;
                 throw std::runtime_error("recv failed");}
         } else if (bytes_received == 0) {
             std::cout << "recv_client quitting" << std::endl;

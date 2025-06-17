@@ -24,8 +24,8 @@ class Channel
     public:
         Channel();
         ~Channel();
-        Channel(std::string c);
-        Channel(std::string c, std::string pwd);
+        Channel(std::string c, std::string name);
+        Channel(std::string c, std::string name, std::string pwd);
 
 	void setInviteOnly(bool inviteOnly);
 	void setPassword(std::string password);
@@ -40,25 +40,25 @@ class Channel
 	bool checkUserLimit();
 	bool checkInvites(std::string nick);
 	bool executeMode(std::vector<std::string> tokens, std::vector<Client>::iterator c, std::vector<Client> &clients);
-        bool addMember(std::string c);
-        bool isMember(std::string nick);
-        void renameMember(std::string oldNick, std::string nick, std::vector<Client> &clients);
-        void removeMember(std::string nick);
+	bool addMember(std::string c);
+	bool isMember(std::string nick);
+	void renameMember(std::string oldNick, std::string nick, std::vector<Client> &clients);
+	void removeMember(std::string nick, std::vector<Client> &clients);
 
-        void addOperator(std::string c);
-        bool isOperator(std::string nick);
-        void removeOperator(std::string nick);
+	void addOperator(std::string c);
+	bool isOperator(std::string nick);
+	void removeOperator(std::string nick, std::vector<Client> &clients);
 
-        bool isEmpty();
-        void sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients);
-        bool checkPassword(std::string in);
-	
-        const std::string& getTopic() const;
-		std::string	memberlist();
-		void setTopic(const std::string &topic, const std::string &setter);
-		bool hasTopic();
-		bool hasInvite(std::string nick);
-		bool hasInviteOnly();
-		std::string getTopicTimestamp() const;
-		const std::string& getTopicSetter() const;
+	bool isEmpty();
+	void sendChannelMessage(std::string sender, std::string message, std::vector<Client> &clients);
+	bool checkPassword(std::string in);
+
+	const std::string& getTopic() const;
+	std::string	memberlist();
+	void setTopic(const std::string &topic, const std::string &setter);
+	bool hasTopic();
+	bool hasInvite(std::string nick);
+	bool hasInviteOnly();
+	std::string getTopicTimestamp() const;
+	const std::string& getTopicSetter() const;
 };

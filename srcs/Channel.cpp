@@ -2,10 +2,9 @@
 
 Channel::Channel() {
 	_topicTimestamp = 0;
-	//_userLimit = 0;
-	//_hasPassword = false;
-	//_inviteOnly = false;
-	//_topicRestricted = false;
+	_userLimit = 0;
+	_inviteOnly = false;
+	_topicRestricted = false;
 	_members.empty();
 	_operators.empty();
 	
@@ -13,9 +12,8 @@ Channel::Channel() {
 
 Channel::~Channel() {}
 
-Channel::Channel(std::string c) {
+Channel::Channel(std::string c, std::string name): _name(name) {
 	_userLimit = 0;
-	//_hasPassword = false;
 	_inviteOnly = false;
 	_topicRestricted = false;
 	Channel();
@@ -23,9 +21,8 @@ Channel::Channel(std::string c) {
 	addOperator(c);
 }
 
-Channel::Channel(std::string c, std::string pwd): _password(pwd) {
+Channel::Channel(std::string c, std::string name, std::string pwd): _name(name), _password(pwd) {
 	_userLimit = 0;
-	//_hasPassword = true;
 	_inviteOnly = false;
 	_topicRestricted = false;
 	Channel();
@@ -101,8 +98,9 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 				!isOperator(argument))
 				addOperator(argument);
 			else if (prefix == '-' && isOperator(argument) &&
-				argument != c->getNickname())
-				removeOperator(argument);
+				argument != c->getNickname()) {
+				removeOperator(argument, clients);
+			}
 			else
 				return false;
 			break;
@@ -186,10 +184,10 @@ void Channel::renameMember(std::string oldNick, std::string nick, std::vector<Cl
 		*std::find(_operators.begin(), _operators.end(), oldNick) = nick;
 }
 
-void Channel::removeMember(std::string nick) {
+void Channel::removeMember(std::string nick, std::vector<Client> &clients) {
 	_members.erase(std::find(_members.begin(), _members.end(), nick));
 	if (isOperator(nick))
-		removeOperator(nick);
+		removeOperator(nick, clients);
 }
 
 //--------------------OPERATORS--------------------------
@@ -204,10 +202,12 @@ bool Channel::isOperator(std::string nick) {
 	return std::find(_operators.begin(), _operators.end(), nick) == _operators.end() ? false : true;
 }
 
-void Channel::removeOperator(std::string nick) {
+void Channel::removeOperator(std::string nick, std::vector<Client> &clients) {
 	_operators.erase(std::find(_operators.begin(), _operators.end(), nick));
-	if (_operators.empty() && !_members.empty())
+	if (_operators.empty() && !_members.empty()) {
 		addOperator(*_members.begin());
+		sendChannelMessage("", ":" + *_members.begin() + " MODE #" + _name + " +o " + *_members.begin(), clients);
+	}
 }
 
 //------------------------------------------------

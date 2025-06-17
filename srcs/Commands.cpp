@@ -158,11 +158,11 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 			std::getline(pwdstream, readPwd, ',');
 			if (readPwd.size()) {	//create pw-locked channel
 				std::cout << "creating locked channel " << readName << " pwd " << readPwd << std::endl;
-				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readPwd)));
+				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readName, readPwd)));
 				join_channel(readName, readPwd, c);
 			} else {	//create open chanel
 				std::cout << "creating open channel " << readName << std::endl;
-				_channels.insert(std::make_pair(readName, Channel(c->getNickname())));
+				_channels.insert(std::make_pair(readName, Channel(c->getNickname(), readName)));
 				join_channel(readName, readPwd, c);
 			} //else return (c->sendToClient(":" + readName + " 476 :Bad Channel Mask"), false); //TODO: reimplement error
 
@@ -206,7 +206,7 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 	std::string reason = strPastColon(line);
 
 	getClient(user)->sendToClient(c->getNickUserHost() + " KICK " + channel + " " + user + " :" + reason);
-	_channels[channel].removeMember(user);
+	_channels[channel].removeMember(user, _clients);
 	_channels[channel].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " KICK " + channel + " " + user, getClients());
 	return true;
 }
@@ -341,7 +341,7 @@ bool	Server::part(std::string &line, std::vector<Client>::iterator c) {
 		else {
 			_channels[channelName].sendChannelMessage(c->getNickname(), c->getNickUserHost() + " PART #" + channelName, getClients());
 			c->sendToClient(c->getNickUserHost() + " PART #" + channelName + " :" + reason);
-			_channels[channelName].removeMember(c->getNickname());
+			_channels[channelName].removeMember(c->getNickname(), _clients);
 			if (_channels[channelName].isEmpty())
 				_channels.erase(channelName);
 		}
@@ -365,9 +365,10 @@ bool	Server::pass(std::string &line, std::vector<Client>::iterator c) {
 		return (c->setIsPasswordValid(true), true);
 	else 
 	{
-		std::cout << "pass-quit" << std::endl;
 		c->sendToClient(c->getColNick() + " 464 :Password incorrect");
-		close(c->getFd());
+		std::string x = "";
+		std::cout << "pass-quit" << std::endl;
+		quit(x, c);
 		return (false);
 	}
 }

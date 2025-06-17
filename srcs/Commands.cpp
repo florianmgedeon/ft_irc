@@ -367,7 +367,7 @@ bool	Server::pass(std::string &line, std::vector<Client>::iterator c) {
 	{
 		std::cout << "pass-quit" << std::endl;
 		c->sendToClient(c->getColNick() + " 464 :Password incorrect");
-		close(c->getFd());
+		quit_client(c->getFd());
 		return (false);
 	}
 }

@@ -214,13 +214,13 @@ bool	Server::kick(std::string &line, std::vector<Client>::iterator c) {
 
 //mode------------modes: +- i,t,k,o,l
 bool	Server::mode(std::string &line, std::vector<Client>::iterator c) {
+	if (!c->getIsRegistered())
+	return (false);
+	if (!line.size())
+	return (c->sendToClient(c->getColNick() +
+	" 461 MODE :Not enough parameters"), false);
 	if (line[0] != '#')
 		return false;
-	if (!c->getIsRegistered())
-		return (false);
-	if (!line.size())
-		return (c->sendToClient(c->getColNick() +
-			" 461 MODE :Not enough parameters"), false);
 
 	std::istringstream iss(line);
 	std::string token;

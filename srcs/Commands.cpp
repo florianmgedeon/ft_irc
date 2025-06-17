@@ -149,9 +149,12 @@ bool	Server::join(std::string &line, std::vector<Client>::iterator c) {
 //std::cout <<"line" <<line <<"_________\n";
 	std::string readName, readPwd;
 	std::stringstream pwdstream, chanNamestream;
-	chanNamestream << tokenize(line, ' ');
-	pwdstream << line;
-	
+	if (line.find(' ') != std::string::npos){
+		chanNamestream << tokenize(line, ' ');	
+		pwdstream << line;
+	}
+	else
+		chanNamestream << tokenize(line, ' ');
 	while (std::getline(chanNamestream, readName, ',')) {
 		stripPrefix(readName);
 		if (_channels.find(readName) == _channels.end()) {	//create channel

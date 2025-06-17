@@ -42,9 +42,9 @@ bool isNumber(std::string& str){
 
 void Channel::lastOp(std::vector<Client>::iterator c, std::vector<Client> &clients){
 
-	std::string client = _members[0];
 	if (_members.size() > 1 && isOperator(c->getNickname())
-		&& _operators.size() == 1){
+	&& _operators.size() == 1){
+			std::string client = _members[0];
 		if (_members[0] == c->getNickname())
 			client = _members[1];
 		sendChannelMessage(c->getNickname(), c->getNickUserHost() + " MODE #" +

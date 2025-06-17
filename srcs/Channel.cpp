@@ -118,7 +118,7 @@ bool Channel::executeMode(std::vector<std::string> tokens,
 			break;
 		}
 	}
-	sendChannelMessage(c->getNickUserHost(), c->getNickUserHost() + " MODE #" +
+	sendChannelMessage("", c->getNickUserHost() + " MODE #" +
 		tokens[0] + " " + tokens[1] + " " + argument, clients);
 	return true;
 }
